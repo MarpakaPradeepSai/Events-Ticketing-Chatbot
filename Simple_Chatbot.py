@@ -25,9 +25,9 @@ model = model.to(device)
 model.eval()
 
 # Category labels and responses (same as your original code)
-category_labels = {0: "buy_ticket", 1: "cancel_ticket", ...}  # Copy your full category_labels dict
-responses = {'cancel_ticket': '...', ...}  # Copy your full responses dict
-static_placeholders = {'{{WEBSITE_URL}}': '...', ...}  # Copy your full static_placeholders
+category_labels = {0: "buy_ticket", 1: "cancel_ticket"}  # Copy your full category_labels dict
+responses = {'cancel_ticket'}  # Copy your full responses dict
+static_placeholders = {'{{WEBSITE_URL}}'}  # Copy your full static_placeholders
 
 # Helper functions (same as original)
 def replace_placeholders(response, dynamic_placeholders, static_placeholders):
