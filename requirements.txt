@@ -1,5 +1,6 @@
-streamlit
-torch
-transformers
-spacy
-en_core_web_trf @ https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.5.0/en_core_web_trf-3.5.0.tar.gz
+streamlit==1.16.0
+transformers==4.30.0
+torch==2.0.0
+spacy==3.4.0
+spacy-transformers==1.2.0
+requests==2.28.1
