@@ -1,7 +1,5 @@
-numpy==1.26.0  # Try a specific version.  Adjust if needed.
-transformers==4.35.2
-torch
 streamlit
---no-cache-dir
-spacy==3.7.2 --no-binary :all:
-https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.7.1/en_core_web_trf-3.7.1-py3-none-any.whl
+transformers
+torch
+spacy
+requests
