@@ -6,7 +6,9 @@ import spacy
 # --- Load Model and Tokenizer ---
 @st.cache_resource  # Use cache_resource for models and tokenizers
 def load_model_tokenizer():
-    path = "ticketing_simple_chatbot_fine_tuned_ALBERT-base-v2_model" # Assuming model is in the same repo or adjust path
+    # **Corrected Path:** Assuming your model is in a directory named "ALBERT_Model"
+    # at the root of your GitHub repository.
+    path = "ALBERT_Model"
     model = AutoModelForSequenceClassification.from_pretrained(path)
     tokenizer = AutoTokenizer.from_pretrained(path)
     model.eval()
