@@ -8,7 +8,7 @@ import spacy
 def load_models():
     """Loads the fine-tuned model, tokenizer, and SpaCy model."""
     # Path to the fine-tuned model (adjust if needed)
-    path = "https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model"  # Important: Use /app/ for GitHub-deployed apps
+    path = "https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/tree/main/ALBERT_Model"  # Important: Use /app/ for GitHub-deployed apps
 
     model = AutoModelForSequenceClassification.from_pretrained(path)
     tokenizer = AutoTokenizer.from_pretrained(path)
