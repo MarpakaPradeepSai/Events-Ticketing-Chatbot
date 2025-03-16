@@ -2,4 +2,3 @@ streamlit
 transformers
 torch
 spacy
-spacy-transformers  # Add this if needed for en_core_web_trf
