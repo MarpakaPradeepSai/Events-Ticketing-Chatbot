@@ -1,4 +1,5 @@
-streamlit==1.22.0
-transformers==4.29.0
-torch==1.13.1
-spacy==3.5.0
+streamlit
+transformers
+torch
+spacy
+spacy-transformers  # Add this if needed for en_core_web_trf
