@@ -2,4 +2,4 @@ streamlit
 transformers
 torch
 spacy
-requests
+en_core_web_trf  # Transformer-based SpaCy model
