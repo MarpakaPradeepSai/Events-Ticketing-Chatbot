@@ -7,7 +7,7 @@ import spacy
 nlp = spacy.load("en_core_web_trf")  # Using transformer-based model for better performance
 
 # Path to the fine-tuned model on GitHub
-model_path = "https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model""
+model_path = "https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model"
 
 # Load the fine-tuned model and tokenizer from the GitHub repository
 model = AutoModelForSequenceClassification.from_pretrained(model_path)
