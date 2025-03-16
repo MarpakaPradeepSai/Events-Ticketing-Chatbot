@@ -3,3 +3,5 @@ transformers
 torch
 spacy
 spacy-transformers
+spacy[transformers]
+en-core-web-trf==3.1.0
