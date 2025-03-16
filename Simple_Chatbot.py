@@ -11,7 +11,7 @@ def load_spacy_model():
 nlp = load_spacy_model()
 
 # Path to the fine-tuned model (assumed to be in your GitHub repo or accessible cloud storage)
-model_path = "ticketing_simple_chatbot_fine_tuned_ALBERT-base-v2_model"
+model_path = "https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/tree/main/ALBERT_Model"
 
 # Load the fine-tuned model and tokenizer
 @st.cache_resource
