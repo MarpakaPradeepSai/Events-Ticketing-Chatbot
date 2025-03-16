@@ -1,6 +1,6 @@
-streamlit==1.16.0
-transformers==4.30.0
-torch==2.0.0
-spacy==3.4.0
-spacy-transformers==1.2.0
-requests==2.28.1
+streamlit
+transformers
+torch
+spacy
+spacy-transformers
+en_core_web_trf==3.6.0 # Specify version for consistency. Check latest version on spacy website.
