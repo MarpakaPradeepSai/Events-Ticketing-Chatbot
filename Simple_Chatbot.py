@@ -3,34 +3,39 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
 import spacy
 
-# --- Load Model and Tokenizer ---
-@st.cache_resource  # Use cache_resource for models and tokenizers
-def load_model_tokenizer():
-    # **Corrected Path:** Assuming your model is in a directory named "ALBERT_Model"
-    # at the root of your GitHub repository.
-    path = "ALBERT_Model"
-    model = AutoModelForSequenceClassification.from_pretrained(path)
-    tokenizer = AutoTokenizer.from_pretrained(path)
-    model.eval()
-    device = torch.device("cpu") # Explicitly set to CPU for Streamlit deployment
-    model.to(device)
-    return model, tokenizer, device
+# Streamlit UI setup
+st.title("Customer Support Chatbot")
+st.markdown("Ask me questions about event tickets!")
 
-model, tokenizer, device = load_model_tokenizer()
-
-# --- Load SpaCy NER Model ---
+# Load SpaCy model for NER (load only once at the start of the app)
 @st.cache_resource
 def load_spacy_model():
-    try:
-        nlp = spacy.load("en_core_web_trf")
-    except OSError:
-        spacy.cli.download("en_core_web_trf") # Download if not present
-        nlp = spacy.load("en_core_web_trf")
-    return nlp
+    return spacy.load("en_core_web_trf")
 
 nlp = load_spacy_model()
 
-# --- Category Labels and Responses ---
+# Path to the fine-tuned model (adjust if your model is in a different location relative to your streamlit app)
+# Assuming your model is in a folder named 'ticketing_simple_chatbot_fine_tuned_ALBERT-base-v2_model'
+# in the same directory as your streamlit app.
+path = "https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot"
+
+# Load the fine-tuned model and tokenizer (load only once at the start of the app)
+@st.cache_resource
+def load_model_tokenizer(model_path):
+    model = AutoModelForSequenceClassification.from_pretrained(model_path)
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    return model, tokenizer
+
+model, tokenizer = load_model_tokenizer(path)
+
+# Put the model in evaluation mode
+model.eval()
+
+# Set device to CPU explicitly (good for Streamlit sharing which might use CPU)
+device = torch.device("cpu")
+model.to(device)
+
+# Category labels mapping (same as in your original code)
 category_labels = {
     0: "buy_ticket", 1: "cancel_ticket", 2: "change_personal_details_on_ticket", 3: "check_cancellation_fee", 4: "check_cancellation_policy",
     5: "check_privacy_policy", 6: "check_refund_policy", 7: "customer_service", 8: "delivery_options", 9: "delivery_period",
@@ -39,6 +44,7 @@ category_labels = {
     22: "track_refund", 23: "transfer_ticket", 24: "upgrade_ticket"
 }
 
+# Responses dictionary (same as in your original code)
 responses = {
     'cancel_ticket': 'To cancel your ticket for the {{EVENT}} in {{CITY}}, please follow these steps:\n\n1. Access {{WEBSITE_URL}} and sign in to your account.\n2. Go to the {{CANCEL_TICKET_SECTION}} section.\n3. Locate your upcoming events and click on the {{EVENT}} in {{CITY}}.\n4. Select the {{CANCEL_TICKET_OPTION}} option.\n5. Complete the prompts to finalize your cancellation.\n\nIf any issues arise, do not hesitate to reach out to our customer support for further help.',
     'buy_ticket': "To acquire a ticket for the {{EVENT}} in {{CITY}}, please undertake the following steps:\n\n1. Access {{WEBSITE_URL}} or launch the {{APP}}.\n2. Proceed to the {{TICKET_SECTION}} segment.\n3. Input the specifics of the desired event or performance.\n4. Identify and select the event from the listed search results.\n5. Specify the quantity of tickets and choose preferred seating arrangements (if applicable).\n6. Move to the checkout phase and provide the required payment details.\n\nUpon completion of your purchase, you will receive an email confirmation containing your ticket information.",
@@ -67,6 +73,7 @@ responses = {
     'upgrade_ticket': "To upgrade your ticket for the upcoming event, please follow these instructions:\n\n1. Go to the {{WEBSITE_URL}}.\n2. Sign in with your username and password.\n3. Proceed to the {{TICKET_SECTION}} area.\n4. Find your current ticket purchase listed under {{UPGRADE_TICKET_INFORMATION}} and select the {{UPGRADE_TICKET_OPTION}} button.\n5. Adhere to the on-screen directions to select your intended upgrade and verify the modifications.\n\nIf you face any difficulties throughout this process, reach out to our support team for additional help.	"
 }
 
+# Static placeholders (same as in your original code)
 static_placeholders = {
     "{{WEBSITE_URL}}": "www.events-ticketing.com",
     "{{SUPPORT_TEAM_LINK}}": "www.support-team.com",
@@ -145,88 +152,105 @@ static_placeholders = {
     "{{ASSISTANCE_SECTION}}" : "<b>Assistance Section</b>"
 }
 
-# --- Functions ---
 def replace_placeholders(response, dynamic_placeholders, static_placeholders):
+    # Replace both static and dynamic placeholders
+    # First replace static placeholders
     for placeholder, value in static_placeholders.items():
         response = response.replace(placeholder, value)
+
+    # Then replace dynamic placeholders
     for placeholder, value in dynamic_placeholders.items():
         response = response.replace(placeholder, value)
+
     return response
 
 def extract_dynamic_placeholders(user_question):
+    # Process the user question through SpaCy NER model
     doc = nlp(user_question)
-    dynamic_placeholders = {}
-    for ent in doc.ents:
-        if ent.label_ == "EVENT":
-            event_text = ent.text.title()
-            dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"
-        elif ent.label_ == "GPE":
-            city_text = ent.text.title()
-            dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"
 
+    # Initialize dictionary to store dynamic placeholders
+    dynamic_placeholders = {}
+
+    # Extract entities and map them to placeholders
+    for ent in doc.ents:
+        if ent.label_ == "EVENT":  # Assuming 'EVENT' is the label for event names (customize based on your model)
+            event_text = ent.text.title()  # Capitalize the first letter of each word in the event name
+            dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"  # Bold the entity
+        elif ent.label_ == "GPE":  # GPE is the label for cities in SpaCy
+            city_text = ent.text.title()  # Capitalize the first letter of each word in the city
+            dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"  # Bold the entity
+
+    # If no event or city was found, add default values
     if '{{EVENT}}' not in dynamic_placeholders:
         dynamic_placeholders['{{EVENT}}'] = "event"
     if '{{CITY}}' not in dynamic_placeholders:
         dynamic_placeholders['{{CITY}}'] = "city"
+
     return dynamic_placeholders
 
-def predict_category(user_question):
-    inputs = tokenizer(user_question, padding=True, truncation=True, return_tensors="pt")
-    inputs = {key: value.to(device) for key, value in inputs.items()}
-    with torch.no_grad():
-        outputs = model(**inputs)
-        logits = outputs.logits
-    prediction = torch.argmax(logits, dim=-1)
-    predicted_category_index = prediction.item()
-    predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")
-    return predicted_category_name
+# Initialize chat history in session state
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# --- Streamlit App UI ---
-st.set_page_config(page_title="Customer Support Chatbot", page_icon=":robot_face:", layout="wide")
-
-st.title("Customer Support Chatbot")
-st.markdown("Ask me questions about ticketing services!")
-
-# Initialize chat history in session state if it doesn't exist
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-
-# Input area for user question
-user_question = st.chat_input("Type your question here...")
-
-if user_question:
-    # Add user message to chat history
-    st.session_state.chat_history.append({"role": "user", "content": user_question})
-
-    # Display user message immediately
-    with st.chat_message("user"):
-        st.markdown(user_question)
-
-    # --- Process User Question and Get Chatbot Response ---
-    predicted_category_name = predict_category(user_question)
-    dynamic_placeholders = extract_dynamic_placeholders(user_question)
-    initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand your request. Please try again.")
-    chatbot_response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
-
-    # Add chatbot response to chat history
-    st.session_state.chat_history.append({"role": "chatbot", "content": chatbot_response})
-
-    # Display chatbot response
-    with st.chat_message("assistant"): # Use "assistant" role for chatbot messages
-        st.markdown(chatbot_response)
-
-# --- Display Chat History ---
-for message in st.session_state.chat_history:
-    with st.chat_message(message["role"]): # Use roles to style differently if needed
+# Display chat messages from history on app rerun
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
+# React to user input
+if prompt := st.chat_input("Ask me anything about event tickets"):
+    # Display user message in chat message container
+    st.chat_message("user").markdown(prompt)
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
-# --- Sidebar for Instructions/Info (Optional) ---
+    # --- Chatbot Logic ---
+    user_question = prompt
+
+    # Extract dynamic placeholders from the user question using SpaCy NER
+    dynamic_placeholders = extract_dynamic_placeholders(user_question)
+
+    # Tokenize the user question
+    inputs = tokenizer(user_question, padding=True, truncation=True, return_tensors="pt")
+
+    # Move input tensors to CPU
+    inputs = {key: value.to(device) for key, value in inputs.items()}
+
+    # Make prediction
+    with torch.no_grad():
+        outputs = model(**inputs)
+        logits = outputs.logits  # Get the raw logits from the model
+
+    # Convert logits to predicted class label
+    prediction = torch.argmax(logits, dim=-1)
+
+    # Map the prediction to the category label
+    predicted_category_index = prediction.item()
+    predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")  # Handle cases where index is out of range
+
+    # Use the responses dictionary to find the response
+    initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand your request. Please try again.")
+
+    # Replace both static and dynamic placeholders in the response
+    response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
+    # --- End Chatbot Logic ---
+
+    # Display assistant response in chat message container
+    with st.chat_message("assistant"):
+        st.markdown(response)
+    # Add assistant response to chat history
+    st.session_state.messages.append({"role": "assistant", "content": response})
+
+# --- Sidebar for Instructions (Optional) ---
 with st.sidebar:
-    st.subheader("About this Chatbot")
-    st.write("This is a simple customer support chatbot designed to answer questions about ticketing services. You can ask questions related to buying, cancelling, or managing tickets, checking policies, and more.")
-    st.write("Try asking questions like:")
-    st.markdown("- How do I cancel my ticket for the concert in London?")
-    st.markdown("- What is the refund policy?")
-    st.markdown("- How can I buy a ticket?")
-    st.markdown("- I want to speak to a human agent")
+    st.subheader("How to use:")
+    st.markdown("1. **Enter your question** in the chat input box below.")
+    st.markdown("2. **Press Enter** or click the 'Send' button.")
+    st.markdown("3. The chatbot will respond with helpful information related to your query about event tickets.")
+    st.markdown("---")
+    st.markdown("This chatbot is designed to understand questions about buying, cancelling, or managing event tickets. Try questions like:")
+    st.markdown("- 'How do I cancel my ticket for the concert in London?'")
+    st.markdown("- 'What are the payment methods available?'")
+    st.markdown("- 'I want to upgrade my ticket.'")
+    st.markdown("---")
+    st.markdown("Note: This is a demo chatbot and may not understand all types of questions.")
