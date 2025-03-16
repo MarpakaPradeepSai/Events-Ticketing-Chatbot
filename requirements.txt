@@ -3,4 +3,3 @@ transformers
 torch
 spacy
 spacy-transformers
-en_core_web_trf
