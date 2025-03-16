@@ -2,29 +2,16 @@ import streamlit as st
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
 import spacy
-import requests
-
-# Function to download model from GitHub
-def download_model_from_github(url, local_path):
-    response = requests.get(url)
-    with open(local_path, 'wb') as file:
-        file.write(response.content)
-
-# Download the model files from GitHub
-model_url = "https://github.com/MarpakaPradeepSai/Project-Sentiment-Analysis/raw/main/ALBERT_Model"
-local_model_path = "ALBERT_Model"
-
-# Download the model files
-download_model_from_github(f"{model_url}/pytorch_model.bin", f"{local_model_path}/pytorch_model.bin")
-download_model_from_github(f"{model_url}/config.json", f"{local_model_path}/config.json")
-download_model_from_github(f"{model_url}/vocab.txt", f"{local_model_path}/vocab.txt")
 
 # Load SpaCy model for NER
 nlp = spacy.load("en_core_web_trf")  # Using transformer-based model for better performance
 
-# Load the fine-tuned model and tokenizer from the saved directory
-model = AutoModelForSequenceClassification.from_pretrained(local_model_path)
-tokenizer = AutoTokenizer.from_pretrained(local_model_path)
+# Path to the fine-tuned model on GitHub
+model_path = "https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model""
+
+# Load the fine-tuned model and tokenizer from the GitHub repository
+model = AutoModelForSequenceClassification.from_pretrained(model_path)
+tokenizer = AutoTokenizer.from_pretrained(model_path)
 
 # Put the model in evaluation mode
 model.eval()
