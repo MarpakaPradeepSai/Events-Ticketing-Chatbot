@@ -1,42 +1,48 @@
+# app.py (Streamlit application file)
+
 import streamlit as st
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
 import spacy
 
-# Streamlit App Title
-st.title("Customer Support Chatbot")
+# --- Model and Tokenizer Loading ---
+@st.cache_resource()  # Caches the model and tokenizer loading
+def load_model_and_tokenizer():
+    """Loads the fine-tuned model and tokenizer from a URL or local path."""
+    # URL to the model files (replace with the direct download links)
+    model_url = "https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model"  #This URL should point to a directory, not a single file.
+    tokenizer_url = "https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model"  #Same. Streamlit can directly load from a directory URL.
 
-# Load SpaCy model for NER (try loading, if not available, instruct user)
-try:
-    nlp = spacy.load("en_core_web_trf")
-except OSError:
-    st.warning("Downloading en_core_web_trf model for SpaCy. This might take a while...")
-    spacy.cli.download("en_core_web_trf")
-    nlp = spacy.load("en_core_web_trf")
-    st.success("SpaCy en_core_web_trf model downloaded successfully!")
+    try:
+        # Try loading from the URL (Hugging Face Hub or your GitHub repo)
+        model = AutoModelForSequenceClassification.from_pretrained(model_url)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_url)
+    except Exception as e:
+        st.error(f"Error loading model from URL: {e}")
+        return None, None
+        # Consider adding a fallback to a local path if URL loading fails
 
-
-# Path to the fine-tuned model (GitHub raw URL)
-model_path = "https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model"
-
-# Function to load model and tokenizer from GitHub URL
-@st.cache_resource
-def load_model_tokenizer(path):
-    model = AutoModelForSequenceClassification.from_pretrained(path)
-    tokenizer = AutoTokenizer.from_pretrained(path)
+    model.eval()  # Put the model in evaluation mode
+    device = torch.device("cpu") #Explicit CPU usage
+    model.to(device)
     return model, tokenizer
 
-# Load the fine-tuned model and tokenizer
-try:
-    model, tokenizer = load_model_tokenizer(model_path)
-    model.eval()
-    device = torch.device("cpu")
-    model.to(device)
-except Exception as e:
-    st.error(f"Error loading model from {model_path}. Please check the path and internet connection. Error details: {e}")
-    st.stop()
 
-# Category labels mapping
+@st.cache_resource()
+def load_spacy_model():
+    """Loads the SpaCy NER model, downloading it if necessary."""
+    try:
+        nlp = spacy.load("en_core_web_trf")
+    except OSError:
+        # OSError usually indicates the model isn't found locally
+        st.warning("Downloading en_core_web_trf model... This may take a while.")
+        spacy.cli.download("en_core_web_trf")
+        nlp = spacy.load("en_core_web_trf")
+    return nlp
+
+
+
+# --- Category Labels and Responses ---
 category_labels = {
     0: "buy_ticket", 1: "cancel_ticket", 2: "change_personal_details_on_ticket", 3: "check_cancellation_fee", 4: "check_cancellation_policy",
     5: "check_privacy_policy", 6: "check_refund_policy", 7: "customer_service", 8: "delivery_options", 9: "delivery_period",
@@ -47,53 +53,29 @@ category_labels = {
 
 responses = {
     'cancel_ticket': 'To cancel your ticket for the {{EVENT}} in {{CITY}}, please follow these steps:\n\n1. Access {{WEBSITE_URL}} and sign in to your account.\n2. Go to the {{CANCEL_TICKET_SECTION}} section.\n3. Locate your upcoming events and click on the {{EVENT}} in {{CITY}}.\n4. Select the {{CANCEL_TICKET_OPTION}} option.\n5. Complete the prompts to finalize your cancellation.\n\nIf any issues arise, do not hesitate to reach out to our customer support for further help.',
-
     'buy_ticket': "To acquire a ticket for the {{EVENT}} in {{CITY}}, please undertake the following steps:\n\n1. Access {{WEBSITE_URL}} or launch the {{APP}}.\n2. Proceed to the {{TICKET_SECTION}} segment.\n3. Input the specifics of the desired event or performance.\n4. Identify and select the event from the listed search results.\n5. Specify the quantity of tickets and choose preferred seating arrangements (if applicable).\n6. Move to the checkout phase and provide the required payment details.\n\nUpon completion of your purchase, you will receive an email confirmation containing your ticket information.",
-
     'change_personal_details_on_ticket': 'To update your personal details on your ticket, please adhere to the following steps:\n\n1. Go to {{WEBSITE_URL}} and sign in to your account.\n2. Proceed to the {{TICKET_SECTION}} section.\n3. Choose the specific ticket for the event in {{CITY}} that you want to amend.\n4. Click on the {{EDIT_BUTTON}} icon next to your personal details.\n5. Make the necessary amendments to your personal information.\n6. Confirm the changes by clicking {{SAVE_BUTTON}}.\n\nIf you face any challenges, please contact our customer support using the contact form available on the website.',
-
     'check_cancellation_fee': 'To verify the cancellation fee, kindly adhere to these steps:\n\n1. Access the {{WEBSITE_URL}}.\n2. Proceed to the {{CANCELLATION_FEE_SECTION}} segment.\n3. Identify the cancellation fee information in the {{CHECK_CANCELLATION_FEE_INFORMATION}} area.\n\nIf you require additional help, do not hesitate to reach out.',
-
     'check_cancellation_policy': "For comprehensive details regarding our cancellation policy, please follow these instructions: \n\n1. Access our official website via the following link: {{WEBSITE_URL}}.\n2. Locate the {{CANCELLATION_POLICY_SECTION}} section within the main navigation menu.\n3. Select the {{CHECK_CANCELLATION_POLICY_OPTION}} option from the subsequent dropdown menu.\n4. Carefully read through the cancellation policy presented on the specific page.\n\nIf you require any additional information or have more inquiries, please do not hesitate to reach out to our customer support team for further assistance.",
-
     'check_privacy_policy': "To access our privacy policy, please adhere to the following instructions:\n\n1. Navigate to {{WEBSITE_URL}}.\n2. Scroll to the bottom section of the homepage.\n3. Select the {{PRIVACY_POLICY_LINK}} link found in the footer area.\n\nBy following these steps, you will be redirected to our comprehensive privacy policy page containing all pertinent details.",
-
     'check_refund_policy': "To access our refund policy, please follow the steps outlined below:\n\n1. Head over to our official site at {{WEBSITE_URL}}.\n2. Go to the {{REFUND_SECTION}} section.\n3. Find and select the {{REFUND_POLICY_LINK}} link.\n\nIf you require any additional help, feel free to seek further assistance in this chat.",
-
     'customer_service': 'For assistance from customer service, please adhere to the following directions:\n\n1. Access our web portal at {{WEBSITE_URL}}.\n2. Proceed to the {{CUSTOMER_SERVICE_SECTION}} tab.\n3. Complete and submit the inquiry form with the details of your request.\n\nOur customer service team will address your question promptly.',
-
     'delivery_options': 'To view the available delivery options for your tickets, please follow these procedures:\n\n1. Navigate to our website at {{WEBSITE_URL}}.\n2. Sign into your existing account or register a new one if necessary.\n3. Access the {{DELIVERY_SECTION}} area.\n4. Choose the event for which you are buying tickets.\n5. During the purchase process, a list of delivery options will be available. Select the option that fits your requirements.\n\nFor further help, you can reach out to our customer support team using the contact information provided on our website.',
-
     'delivery_period': 'To find out the delivery period for your tickets, please follow these instructions carefully:\n\n1. Go to {{WEBSITE_URL}}.\n2. Log into your account with your login credentials.\n3. Proceed to the {{DELIVERY_SECTION}} section.\n4. Select the order or ticket number in question to view more details.\n5. Check the delivery period listed under the {{DELIVERY_PERIOD_INFORMATION}} section.\n\nIf you need any further help, feel free to reach out to customer support via the contact options available on the website.',
-
     'event_organizer': 'To get in touch with an event planner, please follow these instructions:\n\n1. Access our website at {{WEBSITE_URL}}.\n2. Proceed to the {{CONTACT_SECTION}} page.\n3. Select the {{EVENT_ORGANIZER_OPTION}} feature.\n4. Complete the contact form with your information and inquiry.\n5. Submit the form by clicking the {{SEARCH_BUTTON}} button.\n\nAn event planner will contact you shortly. For urgent matters, consider reaching out via the phone number listed in the {{SUPPORT_SECTION}} area.',
-
     'find_ticket': 'To find your tickets for the {{EVENT}} in {{CITY}}, please undertake the following steps:\n\n1. Please access {{WEBSITE_URL}} or launch the {{APP}} application.\n2. Sign in using your established credentials.\n3. Proceed to the {{TICKET_SECTION}} area.\n4. Identify the specific event within your list of purchased tickets.\n5. Select the event to review your ticket details.\n\nFor further assistance, feel free to reach out to our support team via the Help section on our website.',
-
     'find_upcoming_events': 'To access details about upcoming events in {{CITY}} , follow these guidelines: \n\n1. Launch the {{APP}} or go to the {{WEBSITE_URL}}.\n2. Go to the {{EVENTS_SECTION}} section.\n3. Type the name of your city or town into the search field.\n4. Choose the type of events you are interested in, such as musical concerts, theatrical performances, or sports competitions.\n5. Hit the {{SEARCH_BUTTON}} to see a list of upcoming events.\n\nFollowing these steps should provide you with the necessary information. If you require additional help, please inform me.',
-
     'get_refund': "To obtain a refund for your purchased event ticket, please adhere to the following instructions:\n\n1. Access {{WEBSITE_URL}}.\n2. Sign in to your account with your username and password.\n3. Go to {{REFUND_SECTION}}.\n4. Select the specific event for which you are requesting a refund.\n5. Press {{GET_REFUND_OPTION}} to start the refund procedure.\n6. Follow the on-screen directions to finalize your refund application.\n\nUpon submission of your request, a confirmation email will be sent to you detailing the status of your refund. If you experience any difficulties, do not hesitate to reach out to our support team for further help.",
-
     'human_agent': 'To connect with a human agent, please adhere to the instructions provided below:\n\n1. Visit {{WEBSITE_URL}} and access your account by logging in.\n2. Find the {{CONTACT_SECTION}} area.\n3. Choose the option that allows you to speak with a human agent or representative.\n4. Proceed by following the given prompts to establish a connection with an agent.\n\nIf you face any issues along the way, please let us know so that we can offer further assistance.',
-
     'information_about_tickets': 'For comprehensive information regarding tickets for an event, kindly proceed with the following steps:\n\n1. Go to {{WEBSITE_URL}}.\n2. Head over to the {{EVENTS_SECTION}} section.\n3. Identify and click on the event you wish to attend.\n4. Locate and select the {{TICKETS_TAB}} tab to review all the available ticket choices and their respective prices.\n\nThis procedure will equip you with all the relevant details about the tickets for the specified event.',
-
     'information_about_type_events': "To explore the different types of events available, please follow the steps below:\n\n1. Go to {{WEBSITE_URL}}.\n2. Head to the {{EVENTS_SECTION}} section.\n3. Select the {{TYPE_EVENTS_OPTION}} option to access various event categories.\n4. Review the event types listed and choose the one that piques your interest.\n\nIf you need further help, feel free to request additional information.",
-
     'pay': "To proceed with your payment, please adhere to the following steps:\n\n1. Access {{WEBSITE_URL}}.\n2. Sign into your account with your login details.\n3. Go to the {{PAYMENT_SECTION}} area.\n4. Choose your desired {{PAYMENT_OPTION}}.\n5. Fill in the necessary payment or transfer information.\n6. Verify the details and finalize the transaction.\n\nFor any further help, feel free to reach out to our support team via the contact information available on our website.",
-
     'payment_methods': "Thank you for your question regarding our payment options. Please follow these steps to review and utilize various payment methods on our website. \n\n1. Go to {{WEBSITE_URL}}.\n2. Proceed to the {{PAYMENT_SECTION}} area.\n3. Click on {{PAYMENT_OPTION}} to explore the available payment methods.\n4. Select your desired payment method and adhere to the instructions to finalize the payment.\n\nIf you need additional help, do not hesitate to reach out to our support team through the following link: {{SUPPORT_TEAM_LINK}}.",
-
     'report_payment_issue': "If you are experiencing difficulties with your payment, please follow the steps outlined below to report the issue:\n\n1. Navigate to our support page at {{WEBSITE_URL}}.\n2. Access the {{PAYMENT_SECTION}} section.\n3. Choose the option labeled {{PAYMENT_ISSUE_OPTION}} for reporting payment problems.\n4. Complete the form with the required information, including your payment method and any error messages you have encountered.\n5. Submit the form so our team can investigate.\n\nOur support team will contact you as soon as possible to help resolve the issue.",
-
     'sell_ticket': "Beginning the process of selling or exchanging your event ticket is simple. Please adhere to the following instructions:\n\n1. Go to {{WEBSITE_URL}} and enter your credentials to log in.\n2. Proceed to the {{TICKET_SECTION}} area.\n3. Identify the ticket you wish to sell or exchange.\n4. Press the {{SELL_TICKET_OPTION}} button.\n5. Fill in the necessary details and confirm your choice.\n\nBy completing these steps, you can efficiently manage your event tickets. If any complications arise, do not hesitate to seek further assistance.",
-
     'track_cancellation': "To verify your cancellation status, please adhere to the following steps:\n\n1. Go to {{WEBSITE_URL}}.\n2. Sign in to your account using your username and password.\n3. Proceed to the {{CANCELLATION_SECTION}} section.\n4. Click on the {{CANCELLATION_OPTION}} option to check your cancellation status.\n\nFor any additional support, do not hesitate to contact customer service.	",
-
     'track_refund': "To track the status of your refund, please follow these steps:\n\n1. Access our website at {{WEBSITE_URL}} and sign in to your account.\n2. Proceed to the {{REFUND_SECTION}} part within your account dashboard.\n3. Select the {{REFUND_STATUS_OPTION}} to view the present status of your refund.\n\nIf you have any additional inquiries or need more support, do not hesitate to reach out to our customer service team.	",
-
     'transfer_ticket': "To send your ticket for an {{EVENT}} in {{CITY}}, please adhere to these instructions:\n\n1. Access your account on {{WEBSITE_URL}}.\n2. Proceed to the {{TICKET_SECTION}} section found in your profile.\n3. Locate the specific ticket you wish to send from your listed purchases.\n4. Select the {{TRANSFER_TICKET_OPTION}} option available there.\n5. Input the recipient's email and provide any necessary details.\n6. Validate the transfer and await a confirmation email.\n\nIf you face any difficulties, refer to the help section or reach out to customer support.	",
-
     'upgrade_ticket': "To upgrade your ticket for the upcoming event, please follow these instructions:\n\n1. Go to the {{WEBSITE_URL}}.\n2. Sign in with your username and password.\n3. Proceed to the {{TICKET_SECTION}} area.\n4. Find your current ticket purchase listed under {{UPGRADE_TICKET_INFORMATION}} and select the {{UPGRADE_TICKET_OPTION}} button.\n5. Adhere to the on-screen directions to select your intended upgrade and verify the modifications.\n\nIf you face any difficulties throughout this process, reach out to our support team for additional help.	"
 }
 
@@ -174,93 +156,77 @@ static_placeholders = {
     "{{CONNECT_WITH_ORGANIZER}}" : "<b>Connect with Organizer</b>",
     "{{TICKETS_TAB}}" : "<b>Tickets</b>",
     "{{ASSISTANCE_SECTION}}" : "<b>Assistance Section</b>"
+
 }
 
+# --- Placeholder Replacement ---
 def replace_placeholders(response, dynamic_placeholders, static_placeholders):
-    # Replace both static and dynamic placeholders
-    # First replace static placeholders
+    """Replaces both static and dynamic placeholders in the response."""
     for placeholder, value in static_placeholders.items():
         response = response.replace(placeholder, value)
-
-    # Then replace dynamic placeholders
     for placeholder, value in dynamic_placeholders.items():
         response = response.replace(placeholder, value)
-
     return response
 
-def extract_dynamic_placeholders(user_question):
-    # Process the user question through SpaCy NER model
+# --- Dynamic Placeholder Extraction ---
+def extract_dynamic_placeholders(user_question, nlp):
+    """Extracts dynamic placeholders (like EVENT and CITY) using SpaCy NER."""
     doc = nlp(user_question)
-
-    # Initialize dictionary to store dynamic placeholders
     dynamic_placeholders = {}
-
-    # Extract entities and map them to placeholders
     for ent in doc.ents:
-        if ent.label_ == "EVENT":  # Assuming 'EVENT' is the label for event names (customize based on your model)
-            event_text = ent.text.title()  # Capitalize the first letter of each word in the event name
-            dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"  # Bold the entity
-        elif ent.label_ == "GPE":  # GPE is the label for cities in SpaCy
-            city_text = ent.text.title()  # Capitalize the first letter of each word in the city
-            dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"  # Bold the entity
+        if ent.label_ == "EVENT":
+            dynamic_placeholders['{{EVENT}}'] = f"<b>{ent.text.title()}</b>"
+        elif ent.label_ == "GPE":
+            dynamic_placeholders['{{CITY}}'] = f"<b>{ent.text.title()}</b>"
 
-    # If no event or city was found, add default values
+    # Default values if not found
     if '{{EVENT}}' not in dynamic_placeholders:
         dynamic_placeholders['{{EVENT}}'] = "event"
     if '{{CITY}}' not in dynamic_placeholders:
         dynamic_placeholders['{{CITY}}'] = "city"
-
     return dynamic_placeholders
 
-# Initialize chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
 
-# Display chat messages from history on app rerun
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
 
-# Chat input
-if prompt := st.chat_input("Ask me anything about event tickets"):
-    # Add user message to chat history
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    # Display user message in chat message container
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    # Get user question as input
-    user_question = prompt
-
-    # Extract dynamic placeholders from the user question using SpaCy NER
-    dynamic_placeholders = extract_dynamic_placeholders(user_question)
-
-    # Tokenize the user question
+# --- Prediction Function ---
+def predict_category(user_question, model, tokenizer, nlp):
+    """Predicts the category of the user's question and generates a response."""
+    dynamic_placeholders = extract_dynamic_placeholders(user_question, nlp)
     inputs = tokenizer(user_question, padding=True, truncation=True, return_tensors="pt")
+    inputs = {key: value.to(model.device) for key, value in inputs.items()} # Use model's device
 
-    # Move input tensors to CPU
-    inputs = {key: value.to(device) for key, value in inputs.items()}
-
-    # Make prediction
     with torch.no_grad():
         outputs = model(**inputs)
-        logits = outputs.logits  # Get the raw logits from the model
-
-    # Convert logits to predicted class label
+        logits = outputs.logits
     prediction = torch.argmax(logits, dim=-1)
-
-    # Map the prediction to the category label
     predicted_category_index = prediction.item()
-    predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")  # Handle cases where index is out of range
-
-    # Use the responses dictionary to find the response
+    predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")
     initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand your request. Please try again.")
-
-    # Replace both static and dynamic placeholders in the response
     response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
+    return predicted_category_name, response
 
-    # Display assistant response in chat message container
-    with st.chat_message("assistant"):
-        st.markdown(response)
-    # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": response})
+# --- Streamlit App ---
+def main():
+    """Main function for the Streamlit app."""
+    st.title("Events Ticketing Customer Support Chatbot")
+
+    # Load model, tokenizer, and SpaCy model
+    model, tokenizer = load_model_and_tokenizer()
+    nlp = load_spacy_model()
+
+    if model is None or tokenizer is None:  # Check if loading failed
+      st.error("Failed to load the model.  Please check the model URL and your internet connection.")
+      return #Exit the main function if loading fails.
+    user_question = st.text_input("Enter your question:")
+
+    if user_question:
+        predicted_category, response = predict_category(user_question, model, tokenizer, nlp)
+        st.write(f"**Predicted Category:** {predicted_category}")
+        st.write("**ChatBot Response:**")
+        st.markdown(response, unsafe_allow_html=True)  # Use markdown for HTML rendering
+
+
+
+
+if __name__ == "__main__":
+    main()
