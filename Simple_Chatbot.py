@@ -238,7 +238,7 @@ def extract_dynamic_placeholders(user_question):
     return dynamic_placeholders
 
 # Streamlit UI
-st.title("Simple Events Ticketing Chatbot")
+st.title("Simple Events Ticketing Chatbot 🤖")
 st.write("Ask me anything about ticketing for your events!")
 
 # Initialize chat history in session state
