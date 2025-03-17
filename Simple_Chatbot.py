@@ -6,7 +6,8 @@ import os
 import requests
 import time  # For simulating processing time
 
-# Function to download files from GitHub (same as before)
+# --- Function Definitions (download_from_github, load_model, load_model_and_tokenizer, etc.) ---
+# (Keep all your function definitions the same as in your previous improved code)
 def download_from_github(repo_url, file_name, save_path):
     file_url = f"{repo_url}/{file_name}"
     response = requests.get(file_url)
@@ -247,8 +248,12 @@ if "chat_history" not in st.session_state:
 
 # Display chat messages from history on app rerun
 for message in st.session_state.chat_history:
-    with st.chat_message(message["role"], avatar=message["avatar"]):
-        st.markdown(message["content"], unsafe_allow_html=True)
+    if message["role"] == "user":
+        with st.chat_message(is_user=True, avatar=message["avatar"]): # Explicitly use is_user=True for user messages
+            st.markdown(message["content"], unsafe_allow_html=True)
+    else: # For assistant and any other roles, they will be on the left by default
+        with st.chat_message(message["role"], avatar=message["avatar"]):
+            st.markdown(message["content"], unsafe_allow_html=True)
 
 # Input box at the bottom
 if prompt := st.chat_input("Enter your question:"): # Renamed user_question to prompt for clarity
@@ -256,11 +261,11 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
     # Add user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
     # Display user message in chat message container
-    with st.chat_message("user", avatar="👤"):
+    with st.chat_message(is_user=True, avatar="👤"): # Explicitly use is_user=True for user messages
         st.markdown(prompt, unsafe_allow_html=True)
 
     # Simulate bot thinking with a "typing" indicator
-    with st.chat_message("assistant", avatar="🤖"):
+    with st.chat_message("assistant", avatar="🤖"): # Assistant messages on the left by default
         message_placeholder = st.empty()
         full_response = ""
         thinking_dots = "... Thinking..."
