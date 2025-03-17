@@ -201,7 +201,6 @@ static_placeholders = {
     "{{CONNECT_WITH_ORGANIZER}}" : "<b>Connect with Organizer</b>",
     "{{TICKETS_TAB}}" : "<b>Tickets</b>",
     "{{ASSISTANCE_SECTION}}" : "<b>Assistance Section</b>"
-
 }
 
 # Function to replace placeholders (same as before)
@@ -241,20 +240,38 @@ def extract_dynamic_placeholders(user_question):
 st.title("Simple Events Ticketing Chatbot")
 st.write("Ask me anything about ticketing for your events!")
 
+# Custom CSS to align user messages to the right
+st.markdown(
+    """
+<style>
+    .stChatMessage[data-streamlit-chat-message-user=true] {
+        text-align: right;
+    }
+    .stChatMessage[data-streamlit-chat-message-user=true] .stChatMessageContent {
+        background-color: #e0f7fa; /* Light blue background for user messages */
+        border-radius: 10px;
+        padding: 8px 15px;
+    }
+    .stChatMessage[data-streamlit-chat-message-user=false] .stChatMessageContent {
+        background-color: #f0f0f0; /* Light grey background for bot messages */
+        border-radius: 10px;
+        padding: 8px 15px;
+    }
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+
 # Initialize chat history in session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 # Display chat messages from history on app rerun
 for message in st.session_state.chat_history:
-    if message["role"] == "user":
-        # --- STEP 1 DEBUGGING CHANGE: REMOVED avatar ARGUMENT HERE ---
-        with st.chat_message(is_user=True): # Explicitly use is_user=True for user messages, avatar removed for now
-            st.markdown(message["content"], unsafe_allow_html=True)
-    else: # For assistant and any other roles, they will be on the left by default
-        # --- STEP 1 DEBUGGING CHANGE: REMOVED avatar ARGUMENT HERE ---
-        with st.chat_message(message["role"]): # avatar removed for now
-            st.markdown(message["content"], unsafe_allow_html=True)
+    is_user = message["role"] == "user" # Determine if message is from user
+    with st.chat_message(message["role"], avatar=message["avatar"]):
+        st.markdown(message["content"], unsafe_allow_html=True)
 
 # Input box at the bottom
 if prompt := st.chat_input("Enter your question:"): # Renamed user_question to prompt for clarity
@@ -262,11 +279,11 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
     # Add user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
     # Display user message in chat message container
-    with st.chat_message(is_user=True, avatar="👤"): # Explicitly use is_user=True for user messages
+    with st.chat_message("user", avatar="👤"):
         st.markdown(prompt, unsafe_allow_html=True)
 
     # Simulate bot thinking with a "typing" indicator
-    with st.chat_message("assistant", avatar="🤖"): # Assistant messages on the left by default
+    with st.chat_message("assistant", avatar="🤖"):
         message_placeholder = st.empty()
         full_response = ""
         thinking_dots = "... Thinking..."
@@ -300,21 +317,3 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
 
     # Add assistant message to chat history
     st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
-
-# --- NEXT STEP IN DEBUGGING (if removing avatar fixed the error): ---
-# If removing the 'avatar' argument in the history loop makes the error go away,
-# then try the following modification in the history loop to hardcode avatars:
-#
-# ```python
-# # Display chat messages from history on app rerun
-# for message in st.session_state.chat_history:
-#     if message["role"] == "user":
-#         with st.chat_message(is_user=True, avatar="👤"): # Hardcoded avatar for user in history
-#             st.markdown(message["content"], unsafe_allow_html=True)
-#     else: # For assistant and any other roles, they will be on the left by default
-#         with st.chat_message(message["role"], avatar="🤖"): # Hardcoded avatar for assistant in history
-#             st.markdown(message["content"], unsafe_allow_html=True)
-# ```
-#
-# This will help us confirm if the issue was with the *values* of 'message["avatar"]'
-# in the history, and hardcoding will be a more robust solution if that's the case.
