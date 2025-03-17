@@ -6,21 +6,6 @@ import os
 import requests
 import time  # For simulating processing time
 
-# Inject custom CSS to set dark background for user messages
-st.markdown(
-    """
-<style>
-    .stChatMessage[data-testid="stChatMessageContent"]:nth-child(even) {
-        background-color: #333; /* Dark background color for user messages */
-        color: white; /* Optional: white text color for better contrast */
-        border-radius: 10px; /* Optional: rounded corners */
-        padding: 10px; /* Optional: padding for better spacing */
-    }
-</style>
-""",
-    unsafe_allow_html=True,
-)
-
 # Function to download files from GitHub (same as before)
 def download_from_github(repo_url, file_name, save_path):
     file_url = f"{repo_url}/{file_name}"
@@ -309,3 +294,4 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
 
     # Add assistant message to chat history
     st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+
