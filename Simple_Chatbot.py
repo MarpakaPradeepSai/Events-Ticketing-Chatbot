@@ -6,102 +6,6 @@ import os
 import requests
 import time  # For simulating processing time
 
-# --- Page Configuration ---
-st.set_page_config(
-    page_title="Event Ticketing Chatbot",
-    page_icon="🎫",
-    layout="wide", # REMOVED 'wide' layout to revert to default width
-    initial_sidebar_state="collapsed"
-)
-
-# --- Theme Customization ---
-st.markdown(
-    """
-    <style>
-        /* General app styling */
-        body {
-            background-color: #f4f7fa; /* Light background */
-            color: #333; /* Darker text for readability */
-            font-family: 'Arial', sans-serif;
-        }
-
-        /* Chatbot title */
-        .stApp h1 {
-            color: #007bff; /* Primary blue color */
-            text-align: center;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #eee;
-        }
-
-        /* Chat message containers */
-        .stChatMessage {
-            border-radius: 15px;
-            padding: 10px 15px;
-            margin-bottom: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); /* Subtle shadow */
-            max-width: 800px; /* Added max-width to control horizontal width */
-            margin-left: auto;
-            margin-right: auto; /* Center the chat messages */
-        }
-
-        /* User message */
-        .stChatMessage[data-testid="stChatMessageContent"]:nth-child(even) {
-            background-color: #e6f7ff; /* Light blue for user messages */
-            border: 1px solid #d9edf7;
-            color: #31708f; /* Darker blue text for user */
-            align-self: flex-end; /* Align user messages to the right */
-        }
-
-        /* Assistant message */
-        .stChatMessage[data-testid="stChatMessageContent"]:nth-child(odd) {
-            background-color: #fff; /* White for assistant messages */
-            border: 1px solid #ddd;
-            color: #333; /* Standard text color for assistant */
-            align-self: flex-start; /* Align assistant messages to the left */
-        }
-
-        /* Chat input */
-        .stTextInput > div > div > input {
-            border-radius: 20px;
-            padding: 10px 15px;
-            border: 1px solid #ccc;
-            background-color: #f8f8f8;
-            max-width: 800px; /* Added max-width to control input width */
-            margin-left: auto;
-            margin-right: auto; /* Center the chat input */
-            display: block; /* Ensure it behaves as a block element for centering */
-        }
-
-        /* Avatar styling - Adjust as needed for your avatars */
-        .stChatMessageAvatar img {
-            border-radius: 50%; /* Circular avatars */
-            object-fit: cover; /* Ensure image fills the circle */
-            height: 40px;
-            width: 40px;
-        }
-
-        /* Thinking dots animation */
-        .thinking-dots {
-            display: inline-block;
-            animation: thinking 1.5s infinite;
-        }
-
-        @keyframes thinking {
-            0% { opacity: 0.4; }
-            50% { opacity: 1; }
-            100% { opacity: 0.4; }
-        }
-
-        .stApp {
-            max-width: 900px; /* Added max-width to the main app container */
-            margin: 0 auto; /* Center the entire app */
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-
 # Function to download files from GitHub (same as before)
 def download_from_github(repo_url, file_name, save_path):
     file_url = f"{repo_url}/{file_name}"
@@ -334,7 +238,7 @@ def extract_dynamic_placeholders(user_question):
     return dynamic_placeholders
 
 # Streamlit UI
-st.title("Simple Events Ticketing Chatbot 🎫") # Added emoji to title
+st.title("Simple Events Ticketing Chatbot")
 st.write("Ask me anything about ticketing for your events!")
 
 # Initialize chat history in session state
@@ -347,7 +251,7 @@ for message in st.session_state.chat_history:
         st.markdown(message["content"], unsafe_allow_html=True)
 
 # Input box at the bottom
-if prompt := st.chat_input("Enter your question here:"): # More descriptive placeholder
+if prompt := st.chat_input("Enter your question:"): # Renamed user_question to prompt for clarity
 
     # Add user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
@@ -359,8 +263,8 @@ if prompt := st.chat_input("Enter your question here:"): # More descriptive plac
     with st.chat_message("assistant", avatar="🤖"):
         message_placeholder = st.empty()
         full_response = ""
-        thinking_dots = "<span class='thinking-dots'>...</span>" # Using span for styling dots
-        message_placeholder.markdown(thinking_dots, unsafe_allow_html=True) # Show "Thinking..." initially
+        thinking_dots = "... Thinking..."
+        message_placeholder.markdown(thinking_dots) # Show "Thinking..." initially
         time.sleep(0.5) # Small delay for visual effect
 
 
@@ -390,3 +294,4 @@ if prompt := st.chat_input("Enter your question here:"): # More descriptive plac
 
     # Add assistant message to chat history
     st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+
