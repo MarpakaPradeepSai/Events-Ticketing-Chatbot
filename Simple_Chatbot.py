@@ -2,25 +2,49 @@ import streamlit as st
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
 import spacy
+import os
+import requests
 
-# Load the en_core_web_trf model
+# Function to download files from GitHub
+def download_from_github(repo_url, file_name, save_path):
+    file_url = f"{repo_url}/{file_name}"
+    response = requests.get(file_url)
+    if response.status_code == 200:
+        with open(save_path, 'wb') as f:
+            f.write(response.content)
+    else:
+        raise Exception(f"Failed to download {file_name} from GitHub. Status code: {response.status_code}")
+
+# Path where you want to save the downloaded model files
+model_dir = "./albert_model"
+
+# Ensure model directory exists
+if not os.path.exists(model_dir):
+    os.makedirs(model_dir)
+
+# List of files to download from GitHub
+repo_url = 'https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model'
+files = ['config.json', 'model.safetensors', 'special_tokens_map.json', 'spiece.model', 'tokenizer.json', 'tokenizer_config.json']
+
+# Download all model files from GitHub
+for file in files:
+    download_from_github(repo_url, file, os.path.join(model_dir, file))
+
+# Load the spaCy model for NER
 @st.cache_resource
 def load_model():
     nlp = spacy.load("en_core_web_trf")
     return nlp
 
-# Initialize the model
+# Initialize the spaCy model
 nlp = load_model()
 
-# Path to the fine-tuned model (relative to the root of the GitHub repo)
-model_path = "./albert_model"  # Matches your repo structure: /ALBERT_Model/
-
-# Load the fine-tuned model and tokenizer
+# Load the fine-tuned model and tokenizer from the local directory
 @st.cache_resource  # Cache to avoid reloading on every interaction
 def load_model_and_tokenizer():
     try:
-        model = AutoModelForSequenceClassification.from_pretrained(model_path)
-        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        model = AutoModelForSequenceClassification.from_pretrained(model_dir)
+        tokenizer = AutoTokenizer.from_pretrained(model_dir)
         model.eval()  # Set to evaluation mode
         return model, tokenizer
     except Exception as e:
@@ -29,7 +53,7 @@ def load_model_and_tokenizer():
 
 model, tokenizer = load_model_and_tokenizer()
 
-# Check if model loaded successfully
+# Check if the model and tokenizer loaded successfully
 if model is None or tokenizer is None:
     st.stop()  # Halt execution if model loading fails
 
