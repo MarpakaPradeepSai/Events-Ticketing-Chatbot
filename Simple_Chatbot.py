@@ -1,4 +1,3 @@
-Code-1
 import streamlit as st
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
