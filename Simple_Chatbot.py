@@ -13,7 +13,7 @@ def load_model():
 nlp = load_model()
 
 # Path to the fine-tuned model (relative to the root of the GitHub repo)
-model_path = "https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/tree/main/ALBERT_Model"  # Matches your repo structure: /ALBERT_Model/
+model_path = "https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model"  # Matches your repo structure: /ALBERT_Model/
 
 # Load the fine-tuned model and tokenizer
 @st.cache_resource  # Cache to avoid reloading on every interaction
@@ -85,19 +85,27 @@ def replace_placeholders(response, dynamic_placeholders, static_placeholders):
 
 # Function to extract dynamic placeholders using SpaCy
 def extract_dynamic_placeholders(user_question):
+    # Process the user question through SpaCy NER model
     doc = nlp(user_question)
+
+    # Initialize dictionary to store dynamic placeholders
     dynamic_placeholders = {}
+
+    # Extract entities and map them to placeholders
     for ent in doc.ents:
-        if ent.label_ == "EVENT" or ent.text.lower() in ["concert", "game", "show"]:  # Basic event detection
-            event_text = ent.text.title()
-            dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"
-        elif ent.label_ == "GPE":  # City detection
-            city_text = ent.text.title()
-            dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"
+        if ent.label_ == "EVENT":  # Assuming 'EVENT' is the label for event names (customize based on your model)
+            event_text = ent.text.title()  # Capitalize the first letter of each word in the event name
+            dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"  # Bold the entity
+        elif ent.label_ == "GPE":  # GPE is the label for cities in SpaCy
+            city_text = ent.text.title()  # Capitalize the first letter of each word in the city
+            dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"  # Bold the entity
+
+    # If no event or city was found, add default values
     if '{{EVENT}}' not in dynamic_placeholders:
         dynamic_placeholders['{{EVENT}}'] = "event"
     if '{{CITY}}' not in dynamic_placeholders:
         dynamic_placeholders['{{CITY}}'] = "city"
+
     return dynamic_placeholders
 
 # Streamlit UI
