@@ -10,7 +10,7 @@ import time  # For simulating processing time
 st.set_page_config(
     page_title="Event Ticketing Chatbot",
     page_icon="🎫",
-    layout="wide",
+    layout="wide", # REMOVED 'wide' layout to revert to default width
     initial_sidebar_state="collapsed"
 )
 
@@ -39,6 +39,9 @@ st.markdown(
             padding: 10px 15px;
             margin-bottom: 10px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); /* Subtle shadow */
+            max-width: 800px; /* Added max-width to control horizontal width */
+            margin-left: auto;
+            margin-right: auto; /* Center the chat messages */
         }
 
         /* User message */
@@ -63,6 +66,10 @@ st.markdown(
             padding: 10px 15px;
             border: 1px solid #ccc;
             background-color: #f8f8f8;
+            max-width: 800px; /* Added max-width to control input width */
+            margin-left: auto;
+            margin-right: auto; /* Center the chat input */
+            display: block; /* Ensure it behaves as a block element for centering */
         }
 
         /* Avatar styling - Adjust as needed for your avatars */
@@ -83,6 +90,11 @@ st.markdown(
             0% { opacity: 0.4; }
             50% { opacity: 1; }
             100% { opacity: 0.4; }
+        }
+
+        .stApp {
+            max-width: 900px; /* Added max-width to the main app container */
+            margin: 0 auto; /* Center the entire app */
         }
     </style>
     """,
