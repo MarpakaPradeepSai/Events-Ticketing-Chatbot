@@ -24,7 +24,7 @@ if not os.path.exists(model_dir):
 
 # List of files to download from GitHub
 repo_url = 'https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model'
-files = ['config.json', 'model.safetensors', 'special_tokens_map.json', 'spiece.model', 'tokenizer.json', 'tokenizer_config.json']
+files = ['config.json', 'model.safetensors', 'special_tokens_map.json', 'spiece.model', 'tokenizer_config.json']
 
 # Download all model files from GitHub
 for file in files:
