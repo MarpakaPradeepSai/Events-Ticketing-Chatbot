@@ -249,8 +249,18 @@ for message in st.session_state.chat_history:
     with st.chat_message(message["role"], avatar=message["avatar"]):
         st.markdown(message["content"], unsafe_allow_html=True)
 
-# Input box at the bottom
-if prompt := st.chat_input("Enter your question:"): # Renamed user_question to prompt for clarity
+# Input box and reset button at the bottom using columns
+columns = st.columns([4, 1]) # Adjust column widths as needed. [input_column_width, button_column_width]
+with columns[0]: # First column for chat input (wider)
+    prompt = st.chat_input("Enter your question:")
+with columns[1]: # Second column for reset button (narrower)
+    if st.session_state.chat_history: # Conditionally display reset button
+        if st.button("Reset Chat", key="reset_button", use_container_width=True): # use_container_width for button to fill column
+            st.session_state.chat_history = []
+            st.rerun() # Rerun the Streamlit app to clear the chat display immediately
+
+
+if prompt: # Only process if there is a prompt
 
     # Add user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
@@ -293,9 +303,3 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
 
     # Add assistant message to chat history
     st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
-
-# Conditionally display reset button
-if st.session_state.chat_history: # Check if chat_history is not empty
-    if st.button("Reset Chat", key="reset_button"):
-        st.session_state.chat_history = []
-        st.rerun() # Rerun the Streamlit app to clear the chat display immediately
