@@ -244,11 +244,6 @@ st.write("Ask me anything about ticketing for your events!")
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Reset chat button
-if st.button("Reset Chat", key="reset_button"): # Added reset button
-    st.session_state.chat_history = []
-    st.rerun() # Rerun the Streamlit app to clear the chat display immediately
-
 # Display chat messages from history on app rerun
 for message in st.session_state.chat_history:
     with st.chat_message(message["role"], avatar=message["avatar"]):
@@ -298,3 +293,7 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
 
     # Add assistant message to chat history
     st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+
+if st.button("Reset Chat", key="reset_button"): # Moved reset button to below input
+    st.session_state.chat_history = []
+    st.rerun() # Rerun the Streamlit app to clear the chat display immediately
