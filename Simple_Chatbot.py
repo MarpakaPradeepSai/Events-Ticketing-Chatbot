@@ -201,6 +201,7 @@ static_placeholders = {
     "{{CONNECT_WITH_ORGANIZER}}" : "<b>Connect with Organizer</b>",
     "{{TICKETS_TAB}}" : "<b>Tickets</b>",
     "{{ASSISTANCE_SECTION}}" : "<b>Assistance Section</b>"
+
 }
 
 # Function to replace placeholders (same as before)
@@ -240,36 +241,12 @@ def extract_dynamic_placeholders(user_question):
 st.title("Simple Events Ticketing Chatbot")
 st.write("Ask me anything about ticketing for your events!")
 
-# Custom CSS to align user messages to the right
-st.markdown(
-    """
-<style>
-    .stChatMessage[data-streamlit-chat-message-user=true] {
-        text-align: right;
-    }
-    .stChatMessage[data-streamlit-chat-message-user=true] .stChatMessageContent {
-        background-color: #e0f7fa; /* Light blue background for user messages */
-        border-radius: 10px;
-        padding: 8px 15px;
-    }
-    .stChatMessage[data-streamlit-chat-message-user=false] .stChatMessageContent {
-        background-color: #f0f0f0; /* Light grey background for bot messages */
-        border-radius: 10px;
-        padding: 8px 15px;
-    }
-</style>
-""",
-    unsafe_allow_html=True,
-)
-
-
 # Initialize chat history in session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 # Display chat messages from history on app rerun
 for message in st.session_state.chat_history:
-    is_user = message["role"] == "user" # Determine if message is from user
     with st.chat_message(message["role"], avatar=message["avatar"]):
         st.markdown(message["content"], unsafe_allow_html=True)
 
@@ -317,3 +294,4 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
 
     # Add assistant message to chat history
     st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+
