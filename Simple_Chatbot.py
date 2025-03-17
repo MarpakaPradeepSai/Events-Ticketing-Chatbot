@@ -1,3 +1,4 @@
+Code-1
 import streamlit as st
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
@@ -296,7 +297,29 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
 
 # Conditionally display reset button
 if st.session_state.chat_history: # Check if chat_history is not empty
+    st.markdown(
+        """
+        <style>
+        .stButton>button {
+            background: linear-gradient(90deg, #ff8a00, #e52e71); /* Original button gradient */
+            color: white !important;
+            border: none;
+            border-radius: 25px; /* Original button border-radius */
+            padding: 10px 20px;
+            font-size: 1.2em; /* Original button font-size */
+            font-weight: bold; /* Original button font-weight */
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease; /* Original button transition */
+        }
+        .stButton>button:hover {
+            transform: scale(1.05); /* Original button hover transform */
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Original button hover box-shadow */
+            color: white !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
-
