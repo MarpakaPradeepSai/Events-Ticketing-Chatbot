@@ -13,7 +13,7 @@ def load_model():
 nlp = load_model()
 
 # Path to the fine-tuned model (relative to the root of the GitHub repo)
-model_path = "https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model"  # Matches your repo structure: /ALBERT_Model/
+model_path = "./ALBERT_Model"  # Matches your repo structure: /ALBERT_Model/
 
 # Load the fine-tuned model and tokenizer
 @st.cache_resource  # Cache to avoid reloading on every interaction
