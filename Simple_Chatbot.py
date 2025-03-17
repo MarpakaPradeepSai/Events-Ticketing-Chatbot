@@ -6,8 +6,7 @@ import os
 import requests
 import time  # For simulating processing time
 
-# --- Function Definitions (download_from_github, load_model, load_model_and_tokenizer, etc.) ---
-# (Keep all your function definitions the same as in your previous improved code)
+# Function to download files from GitHub (same as before)
 def download_from_github(repo_url, file_name, save_path):
     file_url = f"{repo_url}/{file_name}"
     response = requests.get(file_url)
@@ -249,10 +248,12 @@ if "chat_history" not in st.session_state:
 # Display chat messages from history on app rerun
 for message in st.session_state.chat_history:
     if message["role"] == "user":
-        with st.chat_message(is_user=True, avatar=message["avatar"]): # Explicitly use is_user=True for user messages
+        # --- STEP 1 DEBUGGING CHANGE: REMOVED avatar ARGUMENT HERE ---
+        with st.chat_message(is_user=True): # Explicitly use is_user=True for user messages, avatar removed for now
             st.markdown(message["content"], unsafe_allow_html=True)
     else: # For assistant and any other roles, they will be on the left by default
-        with st.chat_message(message["role"], avatar=message["avatar"]):
+        # --- STEP 1 DEBUGGING CHANGE: REMOVED avatar ARGUMENT HERE ---
+        with st.chat_message(message["role"]): # avatar removed for now
             st.markdown(message["content"], unsafe_allow_html=True)
 
 # Input box at the bottom
@@ -299,3 +300,21 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
 
     # Add assistant message to chat history
     st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+
+# --- NEXT STEP IN DEBUGGING (if removing avatar fixed the error): ---
+# If removing the 'avatar' argument in the history loop makes the error go away,
+# then try the following modification in the history loop to hardcode avatars:
+#
+# ```python
+# # Display chat messages from history on app rerun
+# for message in st.session_state.chat_history:
+#     if message["role"] == "user":
+#         with st.chat_message(is_user=True, avatar="👤"): # Hardcoded avatar for user in history
+#             st.markdown(message["content"], unsafe_allow_html=True)
+#     else: # For assistant and any other roles, they will be on the left by default
+#         with st.chat_message(message["role"], avatar="🤖"): # Hardcoded avatar for assistant in history
+#             st.markdown(message["content"], unsafe_allow_html=True)
+# ```
+#
+# This will help us confirm if the issue was with the *values* of 'message["avatar"]'
+# in the history, and hardcoding will be a more robust solution if that's the case.
