@@ -294,6 +294,8 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
     # Add assistant message to chat history
     st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
 
-if st.button("Reset Chat", key="reset_button"): # Moved reset button to below input
-    st.session_state.chat_history = []
-    st.rerun() # Rerun the Streamlit app to clear the chat display immediately
+# Conditionally display reset button
+if st.session_state.chat_history: # Check if chat_history is not empty
+    if st.button("Reset Chat", key="reset_button"):
+        st.session_state.chat_history = []
+        st.rerun() # Rerun the Streamlit app to clear the chat display immediately
