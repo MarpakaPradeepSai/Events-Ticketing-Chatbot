@@ -4,8 +4,9 @@ import torch
 import spacy
 import os
 import requests
+import time  # For simulating processing time
 
-# Function to download files from GitHub
+# Function to download files from GitHub (same as before)
 def download_from_github(repo_url, file_name, save_path):
     file_url = f"{repo_url}/{file_name}"
     response = requests.get(file_url)
@@ -15,32 +16,32 @@ def download_from_github(repo_url, file_name, save_path):
     else:
         raise Exception(f"Failed to download {file_name} from GitHub. Status code: {response.status_code}")
 
-# Path where you want to save the downloaded model files
+# Path where you want to save the downloaded model files (same as before)
 model_dir = "./albert_model"
 
-# Ensure model directory exists
+# Ensure model directory exists (same as before)
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
 
-# List of files to download from GitHub
+# List of files to download from GitHub (same as before)
 repo_url = 'https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model'
 files = ['config.json', 'model.safetensors', 'special_tokens_map.json', 'spiece.model', 'tokenizer_config.json']
 
-# Download all model files from GitHub
+# Download all model files from GitHub (same as before)
 for file in files:
     download_from_github(repo_url, file, os.path.join(model_dir, file))
 
-# Load the spaCy model for NER
+# Load the spaCy model for NER (same as before)
 @st.cache_resource
 def load_model():
     nlp = spacy.load("en_core_web_trf")
     return nlp
 
-# Initialize the spaCy model
+# Initialize the spaCy model (same as before)
 nlp = load_model()
 
-# Load the fine-tuned model and tokenizer from the local directory
-@st.cache_resource  # Cache to avoid reloading on every interaction
+# Load the fine-tuned model and tokenizer from the local directory (same as before)
+@st.cache_resource
 def load_model_and_tokenizer():
     try:
         model = AutoModelForSequenceClassification.from_pretrained(model_dir)
@@ -53,15 +54,15 @@ def load_model_and_tokenizer():
 
 model, tokenizer = load_model_and_tokenizer()
 
-# Check if the model and tokenizer loaded successfully
+# Check if the model and tokenizer loaded successfully (same as before)
 if model is None or tokenizer is None:
     st.stop()  # Halt execution if model loading fails
 
-# Set device to CPU (Streamlit Cloud typically doesn't provide GPUs)
+# Set device to CPU (Streamlit Cloud typically doesn't provide GPUs) (same as before)
 device = torch.device("cpu")
 model.to(device)
 
-# Category labels mapping (from your original code)
+# Category labels mapping (same as before)
 category_labels = {
     0: "buy_ticket", 1: "cancel_ticket", 2: "change_personal_details_on_ticket", 3: "check_cancellation_fee", 4: "check_cancellation_policy",
     5: "check_privacy_policy", 6: "check_refund_policy", 7: "customer_service", 8: "delivery_options", 9: "delivery_period",
@@ -70,7 +71,7 @@ category_labels = {
     22: "track_refund", 23: "transfer_ticket", 24: "upgrade_ticket"
 }
 
-# Response templates (from your original code)
+# Response templates (same as before)
 responses = {
     'cancel_ticket': 'To cancel your ticket for the {{EVENT}} in {{CITY}}, please follow these steps:\n\n1. Access {{WEBSITE_URL}} and sign in to your account.\n2. Go to the {{CANCEL_TICKET_SECTION}} section.\n3. Locate your upcoming events and click on the {{EVENT}} in {{CITY}}.\n4. Select the {{CANCEL_TICKET_OPTION}} option.\n5. Complete the prompts to finalize your cancellation.\n\nIf any issues arise, do not hesitate to reach out to our customer support for further help.',
 
@@ -123,7 +124,7 @@ responses = {
     'upgrade_ticket': "To upgrade your ticket for the upcoming event, please follow these instructions:\n\n1. Go to the {{WEBSITE_URL}}.\n2. Sign in with your username and password.\n3. Proceed to the {{TICKET_SECTION}} area.\n4. Find your current ticket purchase listed under {{UPGRADE_TICKET_INFORMATION}} and select the {{UPGRADE_TICKET_OPTION}} button.\n5. Adhere to the on-screen directions to select your intended upgrade and verify the modifications.\n\nIf you face any difficulties throughout this process, reach out to our support team for additional help.	"
 }
 
-# Define static placeholders
+# Define static placeholders (same as before)
 static_placeholders = {
     "{{WEBSITE_URL}}": "www.events-ticketing.com",
     "{{SUPPORT_TEAM_LINK}}": "www.support-team.com",
@@ -203,7 +204,7 @@ static_placeholders = {
 
 }
 
-# Function to replace placeholders
+# Function to replace placeholders (same as before)
 def replace_placeholders(response, dynamic_placeholders, static_placeholders):
     for placeholder, value in static_placeholders.items():
         response = response.replace(placeholder, value)
@@ -211,7 +212,7 @@ def replace_placeholders(response, dynamic_placeholders, static_placeholders):
         response = response.replace(placeholder, value)
     return response
 
-# Function to extract dynamic placeholders using SpaCy
+# Function to extract dynamic placeholders using SpaCy (same as before)
 def extract_dynamic_placeholders(user_question):
     # Process the user question through SpaCy NER model
     doc = nlp(user_question)
@@ -240,30 +241,56 @@ def extract_dynamic_placeholders(user_question):
 st.title("Simple Events Ticketing Chatbot")
 st.write("Ask me anything about ticketing for your events!")
 
-# User input
-user_question = st.text_input("Enter your question:", key="user_input")
+# Initialize chat history in session state
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
-if user_question:
-    # Extract dynamic placeholders
-    dynamic_placeholders = extract_dynamic_placeholders(user_question)
+# Display chat messages from history on app rerun
+for message in st.session_state.chat_history:
+    with st.chat_message(message["role"], avatar=message["avatar"]):
+        st.markdown(message["content"], unsafe_allow_html=True)
 
-    # Tokenize input
-    inputs = tokenizer(user_question, padding=True, truncation=True, return_tensors="pt")
-    inputs = {key: value.to(device) for key, value in inputs.items()}
+# Input box at the bottom
+if prompt := st.chat_input("Enter your question:"): # Renamed user_question to prompt for clarity
 
-    # Make prediction
-    with torch.no_grad():
-        outputs = model(**inputs)
-        logits = outputs.logits
-    prediction = torch.argmax(logits, dim=-1)
-    predicted_category_index = prediction.item()
-    predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")
+    # Add user message to chat history
+    st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
+    # Display user message in chat message container
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(prompt, unsafe_allow_html=True)
 
-    # Get and format response
-    initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand your request. Please try again.")
-    response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
+    # Simulate bot thinking with a "typing" indicator
+    with st.chat_message("assistant", avatar="🤖"):
+        message_placeholder = st.empty()
+        full_response = ""
+        thinking_dots = "... Thinking..."
+        message_placeholder.markdown(thinking_dots) # Show "Thinking..." initially
+        time.sleep(0.5) # Small delay for visual effect
 
-    # Display results
-    st.write(f"**Predicted Category:** {predicted_category_name}")
-    st.write("**Chatbot Response:**")
-    st.markdown(response, unsafe_allow_html=True)  # Allow HTML for bold formatting
+
+        # Extract dynamic placeholders
+        dynamic_placeholders = extract_dynamic_placeholders(prompt)
+
+        # Tokenize input
+        inputs = tokenizer(prompt, padding=True, truncation=True, return_tensors="pt")
+        inputs = {key: value.to(device) for key, value in inputs.items()}
+
+        # Make prediction
+        with torch.no_grad():
+            outputs = model(**inputs)
+            logits = outputs.logits
+        prediction = torch.argmax(logits, dim=-1)
+        predicted_category_index = prediction.item()
+        predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")
+
+        # Get and format response
+        initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand your request. Please try again.")
+        response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
+
+        full_response = response # Assign the final response
+
+        message_placeholder.empty() # Clear "Thinking..."
+        message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+
+    # Add assistant message to chat history
+    st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
