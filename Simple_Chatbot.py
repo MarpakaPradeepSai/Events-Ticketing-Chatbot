@@ -201,7 +201,6 @@ static_placeholders = {
     "{{CONNECT_WITH_ORGANIZER}}" : "<b>Connect with Organizer</b>",
     "{{TICKETS_TAB}}" : "<b>Tickets</b>",
     "{{ASSISTANCE_SECTION}}" : "<b>Assistance Section</b>"
-
 }
 
 # Function to replace placeholders (same as before)
@@ -244,6 +243,11 @@ st.write("Ask me anything about ticketing for your events!")
 # Initialize chat history in session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+
+# Reset chat button
+if st.button("Reset Chat", key="reset_button"): # Added reset button
+    st.session_state.chat_history = []
+    st.rerun() # Rerun the Streamlit app to clear the chat display immediately
 
 # Display chat messages from history on app rerun
 for message in st.session_state.chat_history:
@@ -294,4 +298,3 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
 
     # Add assistant message to chat history
     st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
-
