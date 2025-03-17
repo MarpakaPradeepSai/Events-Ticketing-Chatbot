@@ -1,3 +1,4 @@
+Code-1
 import streamlit as st
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
@@ -252,47 +253,56 @@ for message in st.session_state.chat_history:
 # Input box at the bottom
 if prompt := st.chat_input("Enter your question:"): # Renamed user_question to prompt for clarity
 
-    # Add user message to chat history
-    st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
-    # Display user message in chat message container
-    with st.chat_message("user", avatar="👤"):
-        st.markdown(prompt, unsafe_allow_html=True)
+    # Handle empty or whitespace-only input
+    if not prompt.strip():
+        st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"}) # Still add empty input to history to show in chat
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(prompt, unsafe_allow_html=True) # Display empty input in chat
+        with st.chat_message("assistant", avatar="🤖"):
+            st.error("Please enter a valid question. You cannot send empty messages.") # Display error for empty input
+        st.session_state.chat_history.append({"role": "assistant", "content": "Please enter a valid question. You cannot send empty messages.", "avatar": "🤖"}) # Add error to chat history
+    else:
+        # Add user message to chat history
+        st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
+        # Display user message in chat message container
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(prompt, unsafe_allow_html=True)
 
-    # Simulate bot thinking with a "typing" indicator
-    with st.chat_message("assistant", avatar="🤖"):
-        message_placeholder = st.empty()
-        full_response = ""
-        thinking_dots = "... Thinking..."
-        message_placeholder.markdown(thinking_dots) # Show "Thinking..." initially
-        time.sleep(0.5) # Small delay for visual effect
+        # Simulate bot thinking with a "typing" indicator
+        with st.chat_message("assistant", avatar="🤖"):
+            message_placeholder = st.empty()
+            full_response = ""
+            thinking_dots = "... Thinking..."
+            message_placeholder.markdown(thinking_dots) # Show "Thinking..." initially
+            time.sleep(0.5) # Small delay for visual effect
 
 
-        # Extract dynamic placeholders
-        dynamic_placeholders = extract_dynamic_placeholders(prompt)
+            # Extract dynamic placeholders
+            dynamic_placeholders = extract_dynamic_placeholders(prompt)
 
-        # Tokenize input
-        inputs = tokenizer(prompt, padding=True, truncation=True, return_tensors="pt")
-        inputs = {key: value.to(device) for key, value in inputs.items()}
+            # Tokenize input
+            inputs = tokenizer(prompt, padding=True, truncation=True, return_tensors="pt")
+            inputs = {key: value.to(device) for key, value in inputs.items()}
 
-        # Make prediction
-        with torch.no_grad():
-            outputs = model(**inputs)
-            logits = outputs.logits
-        prediction = torch.argmax(logits, dim=-1)
-        predicted_category_index = prediction.item()
-        predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")
+            # Make prediction
+            with torch.no_grad():
+                outputs = model(**inputs)
+                logits = outputs.logits
+            prediction = torch.argmax(logits, dim=-1)
+            predicted_category_index = prediction.item()
+            predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")
 
-        # Get and format response
-        initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand your request. Please try again.")
-        response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
+            # Get and format response
+            initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand your request. Please try again.")
+            response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
 
-        full_response = response # Assign the final response
+            full_response = response # Assign the final response
 
-        message_placeholder.empty() # Clear "Thinking..."
-        message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+            message_placeholder.empty() # Clear "Thinking..."
+            message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
 
-    # Add assistant message to chat history
-    st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+        # Add assistant message to chat history
+        st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
 
 # Conditionally display reset button
 if st.session_state.chat_history: # Check if chat_history is not empty
