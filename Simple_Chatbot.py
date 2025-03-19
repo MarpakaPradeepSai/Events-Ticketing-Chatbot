@@ -260,7 +260,7 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
         with st.chat_message("user", avatar="👤"):
             st.markdown(prompt, unsafe_allow_html=True) # Display empty input in chat
         with st.chat_message("assistant", avatar="🤖"):
-            st.error("Please enter a valid question. You cannot send empty messages.") # Display error for empty input
+            st.error("⚠️ Please enter a valid question. You cannot send empty messages.") # Display error for empty input
         st.session_state.chat_history.append({"role": "assistant", "content": "Please enter a valid question. You cannot send empty messages.", "avatar": "🤖"}) # Add error to chat history
     else:
         # Add user message to chat history
