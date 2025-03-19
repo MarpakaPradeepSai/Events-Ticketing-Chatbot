@@ -251,6 +251,8 @@ for message in st.session_state.chat_history:
 
 # Input box at the bottom
 if prompt := st.chat_input("Enter your question:"): # Renamed user_question to prompt for clarity
+    # Capitalize the first letter of the user input
+    prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
 
     # Handle empty or whitespace-only input
     if not prompt.strip():
