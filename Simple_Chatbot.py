@@ -271,29 +271,36 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
 
         # Simulate bot thinking with a "typing" indicator
         with st.chat_message("assistant", avatar="🤖"):
-            with st.spinner("Generating response..."): # Using st.spinner here
-                # Extract dynamic placeholders
-                dynamic_placeholders = extract_dynamic_placeholders(prompt)
+            message_placeholder = st.empty()
+            full_response = ""
+            thinking_dots = "... Thinking..."
+            message_placeholder.markdown(thinking_dots) # Show "Thinking..." initially
+            time.sleep(0.5) # Small delay for visual effect
 
-                # Tokenize input
-                inputs = tokenizer(prompt, padding=True, truncation=True, return_tensors="pt")
-                inputs = {key: value.to(device) for key, value in inputs.items()}
 
-                # Make prediction
-                with torch.no_grad():
-                    outputs = model(**inputs)
-                    logits = outputs.logits
-                prediction = torch.argmax(logits, dim=-1)
-                predicted_category_index = prediction.item()
-                predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")
+            # Extract dynamic placeholders
+            dynamic_placeholders = extract_dynamic_placeholders(prompt)
 
-                # Get and format response
-                initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand your request. Please try again.")
-                response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
+            # Tokenize input
+            inputs = tokenizer(prompt, padding=True, truncation=True, return_tensors="pt")
+            inputs = {key: value.to(device) for key, value in inputs.items()}
 
-                full_response = response # Assign the final response
+            # Make prediction
+            with torch.no_grad():
+                outputs = model(**inputs)
+                logits = outputs.logits
+            prediction = torch.argmax(logits, dim=-1)
+            predicted_category_index = prediction.item()
+            predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")
 
-                st.markdown(full_response, unsafe_allow_html=True) # Directly display bot response
+            # Get and format response
+            initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand your request. Please try again.")
+            response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
+
+            full_response = response # Assign the final response
+
+            message_placeholder.empty() # Clear "Thinking..."
+            message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
 
         # Add assistant message to chat history
         st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
@@ -326,3 +333,5 @@ if st.session_state.chat_history: # Check if chat_history is not empty
     if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
+
+
