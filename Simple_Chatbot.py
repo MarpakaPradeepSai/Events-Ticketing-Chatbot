@@ -119,17 +119,26 @@ static_placeholders = {
 
 # Function to replace placeholders
 def replace_placeholders(response, dynamic_placeholders, static_placeholders):
+    print("Replacing Placeholders...") # ADDED
+    print("Dynamic Placeholders:", dynamic_placeholders) # ADDED
+    print("Static Placeholders:", static_placeholders) # ADDED
     for placeholder, value in static_placeholders.items():
         response = response.replace(placeholder, value)
     for placeholder, value in dynamic_placeholders.items():
         response = response.replace(placeholder, value)
+    print("Response after placeholder replacement:", response) # ADDED
     return response
 
 # Function to extract dynamic placeholders using SpaCy
 def extract_dynamic_placeholders(user_question):
+    print("Extracting Dynamic Placeholders...") # ADDED
+    print("User Question:", user_question) # ADDED
+    print("SpaCy Model Loaded:", nlp is not None) # ADDED
     doc = nlp(user_question)
+    print("SpaCy Doc Object:", doc) # ADDED
     dynamic_placeholders = {}
     for ent in doc.ents:
+        print("Entity:", ent.text, "Label:", ent.label_) # ADDED
         if ent.label_ == "EVENT":
             event_text = ent.text.title()
             dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"
@@ -141,6 +150,7 @@ def extract_dynamic_placeholders(user_question):
         dynamic_placeholders['{{EVENT}}'] = "event"
     if '{{CITY}}' not in dynamic_placeholders:
         dynamic_placeholders['{{CITY}}'] = "city"
+    print("Dynamic Placeholders Extracted:", dynamic_placeholders) # ADDED
     return dynamic_placeholders
 
 # Function to generate response with DistilGPT2
@@ -167,7 +177,9 @@ def generate_response(model, tokenizer, instruction, max_length=256):
 
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     response_start = response.find("Response:") + len("Response:")
-    return response[response_start:].strip()
+    bot_response_text = response[response_start:].strip() # ADDED for clarity
+    print("DistilGPT2 Bot Response:", bot_response_text) # ADDED
+    return bot_response_text # Return just the text
 
 
 # Streamlit UI
