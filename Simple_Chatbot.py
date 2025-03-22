@@ -1,11 +1,11 @@
 import streamlit as st
-from transformers import GPT2Tokenizer, GPT2LMHeadModel
 import torch
-import spacy
-import os
+from transformers import GPT2Tokenizer, GPT2LMHeadModel
 import requests
-import time  # For simulating processing time
+import os
 import warnings
+import spacy
+import time
 
 warnings.filterwarnings('ignore')
 
@@ -23,65 +23,69 @@ MODEL_FILES = [
     "vocab.json"
 ]
 
-# Path where you want to save the downloaded model files
-model_dir = "./distilgpt2_model"
-
-# Ensure model directory exists
-if not os.path.exists(model_dir):
-    os.makedirs(model_dir)
-
 # Function to download model files from GitHub
-def download_model_files(model_dir):
+def download_model_files(model_dir="/tmp/DistilGPT2_Model"):
+    os.makedirs(model_dir, exist_ok=True)
+
     for filename in MODEL_FILES:
         url = f"{GITHUB_MODEL_URL}/{filename}"
         local_path = os.path.join(model_dir, filename)
 
         if not os.path.exists(local_path):
-            response = requests.get(url, stream=True) # Use stream=True for potentially large files
+            response = requests.get(url)
             if response.status_code == 200:
                 with open(local_path, "wb") as f:
-                    for chunk in response.iter_content(chunk_size=8192): # Stream the download in chunks
-                        if chunk: # filter out keep-alive new chunks
-                            f.write(chunk)
-                print(f"Downloaded {filename} successfully.")
+                    f.write(response.content)
             else:
-                st.error(f"Failed to download {filename} from GitHub. Status code: {response.status_code}")
+                st.error(f"Failed to download {filename} from GitHub.")
                 return False
     return True
 
-# Download model files if not already present
-if not all(os.path.exists(os.path.join(model_dir, file)) for file in MODEL_FILES):
-    if download_model_files(model_dir):
-        st.success("DistilGPT2 model files downloaded successfully!")
-    else:
-        st.error("Failed to download DistilGPT2 model files. Please check console for errors.")
-        st.stop() # Stop execution if download fails
-
-# Load spaCy model
+# Load spaCy model for NER
 @st.cache_resource
 def load_spacy_model():
     nlp = spacy.load("en_core_web_trf")
     return nlp
 
-nlp = load_spacy_model()
-
 # Load model and tokenizer
 @st.cache_resource(show_spinner=False)
 def load_model_and_tokenizer():
-    try:
-        tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
-        model = GPT2LMHeadModel.from_pretrained(model_dir)
-        return model, tokenizer
-    except Exception as e:
-        st.error(f"Error loading model or tokenizer: {str(e)}")
+    model_dir = "/tmp/DistilGPT2_Model"
+    if not download_model_files(model_dir):
+        st.error("Model download failed. Check your internet connection or GitHub URL.")
         return None, None
 
-model, tokenizer = load_model_and_tokenizer()
+    model = GPT2LMHeadModel.from_pretrained(model_dir, trust_remote_code=True)
+    tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
+    return model, tokenizer
 
-if model is None or tokenizer is None:
-    st.stop()
+# Generate a chatbot response
+def generate_response(model, tokenizer, instruction, max_length=256):
+    model.eval()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
 
-# Static placeholders
+    input_text = f"Instruction: {instruction} Response:"
+
+    inputs = tokenizer(input_text, return_tensors="pt", padding=True, truncation=True).to(device)
+
+    with torch.no_grad():
+        outputs = model.generate(
+            input_ids=inputs["input_ids"],
+            attention_mask=inputs["attention_mask"],
+            max_length=max_length,
+            num_return_sequences=1,
+            temperature=0.7,
+            top_p=0.95,
+            do_sample=True,
+            pad_token_id=tokenizer.eos_token_id
+        )
+
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    response_start = response.find("Response:") + len("Response:")
+    return response[response_start:].strip()
+
+# Define static placeholders
 static_placeholders = {
     "{{CANCEL_TICKET_OPTION}}": "<b>Cancel Ticket</b>",
     "{{GET_REFUND_OPTION}}": "<b>Get Refund</b>",
@@ -119,143 +123,131 @@ static_placeholders = {
 
 # Function to replace placeholders
 def replace_placeholders(response, dynamic_placeholders, static_placeholders):
-    print("Replacing Placeholders...") # ADDED
-    print("Dynamic Placeholders:", dynamic_placeholders) # ADDED
-    print("Static Placeholders:", static_placeholders) # ADDED
     for placeholder, value in static_placeholders.items():
         response = response.replace(placeholder, value)
     for placeholder, value in dynamic_placeholders.items():
         response = response.replace(placeholder, value)
-    print("Response after placeholder replacement:", response) # ADDED
     return response
 
 # Function to extract dynamic placeholders using SpaCy
-def extract_dynamic_placeholders(user_question):
-    print("Extracting Dynamic Placeholders...") # ADDED
-    print("User Question:", user_question) # ADDED
-    print("SpaCy Model Loaded:", nlp is not None) # ADDED
+def extract_dynamic_placeholders(user_question, nlp):
+    # Process the user question through SpaCy NER model
     doc = nlp(user_question)
-    print("SpaCy Doc Object:", doc) # ADDED
-    dynamic_placeholders = {}
-    for ent in doc.ents:
-        print("Entity:", ent.text, "Label:", ent.label_) # ADDED
-        if ent.label_ == "EVENT":
-            event_text = ent.text.title()
-            dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"
-        elif ent.label_ == "GPE":
-            city_text = ent.text.title()
-            dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"
 
+    # Initialize dictionary to store dynamic placeholders
+    dynamic_placeholders = {}
+
+    # Extract entities and map them to placeholders
+    for ent in doc.ents:
+        if ent.label_ == "EVENT":  # Assuming 'EVENT' is the label for event names (customize based on your model)
+            event_text = ent.text.title()  # Capitalize the first letter of each word in the event name
+            dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"  # Bold the entity
+        elif ent.label_ == "GPE":  # GPE is the label for cities in SpaCy
+            city_text = ent.text.title()  # Capitalize the first letter of each word in the city
+            dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"  # Bold the entity
+
+    # If no event or city was found, add default values
     if '{{EVENT}}' not in dynamic_placeholders:
         dynamic_placeholders['{{EVENT}}'] = "event"
     if '{{CITY}}' not in dynamic_placeholders:
         dynamic_placeholders['{{CITY}}'] = "city"
-    print("Dynamic Placeholders Extracted:", dynamic_placeholders) # ADDED
+
     return dynamic_placeholders
 
-# Function to generate response with DistilGPT2
-def generate_response(model, tokenizer, instruction, max_length=256):
-    model.eval()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
-
-    input_text = f"Instruction: {instruction} Response:"
-
-    inputs = tokenizer(input_text, return_tensors="pt", padding=True, truncation=True, max_length=512) # Added truncation and max_length
-    inputs = inputs.to(device)
-
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_length=max_length,
-            num_return_sequences=1,
-            temperature=0.7,
-            top_p=0.95,
-            do_sample=True,
-            pad_token_id=tokenizer.eos_token_id
-        )
-
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    response_start = response.find("Response:") + len("Response:")
-    bot_response_text = response[response_start:].strip() # ADDED for clarity
-    print("DistilGPT2 Bot Response:", bot_response_text) # ADDED
-    return bot_response_text # Return just the text
-
-
 # Streamlit UI
-st.title("🎟️ Advanced Events Ticketing Chatbot")
-st.write("Ask me about ticket cancellations, refunds, or any event-related inquiries!")
+def main():
+    st.title("🎟️ Advanced Events Ticketing Chatbot")
+    st.write("Ask me about ticket cancellations, refunds, or any event-related inquiries!")
 
-# Initialize chat history in session state
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+    nlp = load_spacy_model()
+    model, tokenizer = load_model_and_tokenizer()
 
-# Display chat messages from history on app rerun
-for message in st.session_state.chat_history:
-    with st.chat_message(message["role"], avatar=message["avatar"]):
-        st.markdown(message["content"], unsafe_allow_html=True)
+    if model is None or tokenizer is None or nlp is None:
+        st.error("Failed to load the model, tokenizer, or spaCy model.")
+        return
 
-# Input box at the bottom
-if prompt := st.chat_input("Enter your question:"):
-    prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
+    # Initialize chat history in session state
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
 
-    if not prompt.strip():
-        st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
-        with st.chat_message("user", avatar="👤"):
-            st.markdown(prompt, unsafe_allow_html=True)
-        with st.chat_message("assistant", avatar="🤖"):
-            st.error("⚠️ Please enter a valid question. You cannot send empty messages.")
-        st.session_state.chat_history.append({"role": "assistant", "content": "Please enter a valid question. You cannot send empty messages.", "avatar": "🤖"})
-    else:
-        st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
-        with st.chat_message("user", avatar="👤"):
-            st.markdown(prompt, unsafe_allow_html=True)
+    # Display chat messages from history on app rerun
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"], avatar=message["avatar"]):
+            st.markdown(message["content"], unsafe_allow_html=True)
 
-        with st.chat_message("assistant", avatar="🤖"):
-            message_placeholder = st.empty()
-            full_response = ""
-            thinking_dots = "... Thinking..."
-            message_placeholder.markdown(thinking_dots)
-            time.sleep(0.5)
+    # Input box at the bottom
+    if prompt := st.chat_input("Enter your question:"):
+        # Capitalize the first letter of the user input
+        prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
 
-            dynamic_placeholders = extract_dynamic_placeholders(prompt)
+        # Handle empty or whitespace-only input
+        if not prompt.strip():
+            st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"}) # Still add empty input to history to show in chat
+            with st.chat_message("user", avatar="👤"):
+                st.markdown(prompt, unsafe_allow_html=True) # Display empty input in chat
+            with st.chat_message("assistant", avatar="🤖"):
+                st.error("⚠️ Please enter a valid question. You cannot send empty messages.") # Display error for empty input
+            st.session_state.chat_history.append({"role": "assistant", "content": "Please enter a valid question. You cannot send empty messages.", "avatar": "🤖"}) # Add error to chat history
+        else:
+            # Add user message to chat history
+            st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
+            # Display user message in chat message container
+            with st.chat_message("user", avatar="👤"):
+                st.markdown(prompt, unsafe_allow_html=True)
 
-            # Generate response using DistilGPT2
-            bot_response = generate_response(model, tokenizer, prompt)
-            response_with_placeholders = replace_placeholders(bot_response, dynamic_placeholders, static_placeholders)
+            # Simulate bot thinking with a "typing" indicator
+            with st.chat_message("assistant", avatar="🤖"):
+                message_placeholder = st.empty()
+                full_response = ""
+                thinking_dots = "... Thinking..."
+                message_placeholder.markdown(thinking_dots) # Show "Thinking..." initially
+                time.sleep(0.5) # Small delay for visual effect
 
-            full_response = response_with_placeholders
+                # Extract dynamic placeholders
+                dynamic_placeholders = extract_dynamic_placeholders(prompt, nlp)
 
-            message_placeholder.empty()
-            message_placeholder.markdown(full_response, unsafe_allow_html=True)
+                # Generate response from DistilGPT2
+                raw_response = generate_response(model, tokenizer, prompt)
 
-        st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+                # Replace placeholders in the generated response
+                response = replace_placeholders(raw_response, dynamic_placeholders, static_placeholders)
 
-# Conditionally display reset button
-if st.session_state.chat_history:
-    st.markdown(
-        """
-        <style>
-        .stButton>button {
-            background: linear-gradient(90deg, #ff8a00, #e52e71);
+                full_response = response # Assign the final response
+
+                message_placeholder.empty() # Clear "Thinking..."
+                message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+
+            # Add assistant message to chat history
+            st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+
+    # Conditionally display reset button
+    if st.session_state.chat_history: # Check if chat_history is not empty
+        st.markdown(
+            """
+            <style>
+            .stButton>button {
+            background: linear-gradient(90deg, #ff8a00, #e52e71); /* Original button gradient */
             color: white !important;
             border: none;
-            border-radius: 25px;
+            border-radius: 25px; /* Original button border-radius */
             padding: 10px 20px;
-            font-size: 1.2em;
-            font-weight: bold;
+            font-size: 1.2em; /* Original button font-size */
+            font-weight: bold; /* Original button font-weight */
             cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .stButton>button:hover {
-            transform: scale(1.05);
-            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease; /* Original button transition */
+            }
+            .stButton>button:hover {
+            transform: scale(1.05); /* Original button hover transform */
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Original button hover box-shadow */
             color: white !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-    if st.button("Reset Chat", key="reset_button"):
-        st.session_state.chat_history = []
-        st.rerun()
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button("Reset Chat", key="reset_button"):
+            st.session_state.chat_history = []
+            st.rerun() # Rerun the Streamlit app to clear the chat display immediately
+
+if __name__ == "__main__":
+    main()
