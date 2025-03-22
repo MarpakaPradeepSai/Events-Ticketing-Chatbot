@@ -1,57 +1,87 @@
 import streamlit as st
-import torch
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
+import torch
 import spacy
 import os
 import requests
 import time  # For simulating processing time
+import warnings
+
+warnings.filterwarnings('ignore')
+
+# GitHub directory containing the model files
+GITHUB_MODEL_URL = "https://github.com/MarpakaPradeepSai/Advanced-Events-Ticketing-Customer-Support-Chatbot/raw/main/DistilGPT2_Model"
+
+# List of model files to download
+MODEL_FILES = [
+    "config.json",
+    "generation_config.json",
+    "merges.txt",
+    "model.safetensors",
+    "special_tokens_map.json",
+    "tokenizer_config.json",
+    "vocab.json"
+]
+
+# Path where you want to save the downloaded model files
+model_dir = "./distilgpt2_model"
+
+# Ensure model directory exists
+if not os.path.exists(model_dir):
+    os.makedirs(model_dir)
 
 # Function to download model files from GitHub
-def download_model_files(model_dir="/tmp/DistilGPT2_Model"):
-    GITHUB_MODEL_URL = "https://github.com/MarpakaPradeepSai/Advanced-Events-Ticketing-Customer-Support-Chatbot/raw/main/DistilGPT2_Model"
-    MODEL_FILES = [
-        "config.json", "generation_config.json", "merges.txt", "model.safetensors",
-        "special_tokens_map.json", "tokenizer_config.json", "vocab.json"
-    ]
-    
-    os.makedirs(model_dir, exist_ok=True)
-    
+def download_model_files(model_dir):
     for filename in MODEL_FILES:
         url = f"{GITHUB_MODEL_URL}/{filename}"
         local_path = os.path.join(model_dir, filename)
-        
+
         if not os.path.exists(local_path):
-            response = requests.get(url)
+            response = requests.get(url, stream=True) # Use stream=True for potentially large files
             if response.status_code == 200:
                 with open(local_path, "wb") as f:
-                    f.write(response.content)
+                    for chunk in response.iter_content(chunk_size=8192): # Stream the download in chunks
+                        if chunk: # filter out keep-alive new chunks
+                            f.write(chunk)
+                print(f"Downloaded {filename} successfully.")
             else:
-                st.error(f"Failed to download {filename} from GitHub.")
+                st.error(f"Failed to download {filename} from GitHub. Status code: {response.status_code}")
                 return False
     return True
 
-# Load model and tokenizer
-@st.cache_resource(show_spinner=False)
-def load_model_and_tokenizer():
-    model_dir = "/tmp/DistilGPT2_Model"
-    if not download_model_files(model_dir):
-        st.error("Model download failed. Check your internet connection or GitHub URL.")
-        return None, None
-    
-    model = GPT2LMHeadModel.from_pretrained(model_dir, trust_remote_code=True)
-    tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
-    return model, tokenizer
+# Download model files if not already present
+if not all(os.path.exists(os.path.join(model_dir, file)) for file in MODEL_FILES):
+    if download_model_files(model_dir):
+        st.success("DistilGPT2 model files downloaded successfully!")
+    else:
+        st.error("Failed to download DistilGPT2 model files. Please check console for errors.")
+        st.stop() # Stop execution if download fails
 
-# Load the spaCy model for NER
+# Load spaCy model
 @st.cache_resource
 def load_spacy_model():
     nlp = spacy.load("en_core_web_trf")
     return nlp
 
-# Initialize spaCy model for NER
 nlp = load_spacy_model()
 
-# Static placeholders (same as before)
+# Load model and tokenizer
+@st.cache_resource(show_spinner=False)
+def load_model_and_tokenizer():
+    try:
+        tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
+        model = GPT2LMHeadModel.from_pretrained(model_dir)
+        return model, tokenizer
+    except Exception as e:
+        st.error(f"Error loading model or tokenizer: {str(e)}")
+        return None, None
+
+model, tokenizer = load_model_and_tokenizer()
+
+if model is None or tokenizer is None:
+    st.stop()
+
+# Static placeholders
 static_placeholders = {
     "{{CANCEL_TICKET_OPTION}}": "<b>Cancel Ticket</b>",
     "{{GET_REFUND_OPTION}}": "<b>Get Refund</b>",
@@ -87,7 +117,7 @@ static_placeholders = {
     "{{CANCELLATION_OPTION}}": "<b>Cancellation</b>"
 }
 
-# Function to replace placeholders in the response
+# Function to replace placeholders
 def replace_placeholders(response, dynamic_placeholders, static_placeholders):
     for placeholder, value in static_placeholders.items():
         response = response.replace(placeholder, value)
@@ -95,45 +125,38 @@ def replace_placeholders(response, dynamic_placeholders, static_placeholders):
         response = response.replace(placeholder, value)
     return response
 
-# Function to extract dynamic placeholders using SpaCy (same as before)
+# Function to extract dynamic placeholders using SpaCy
 def extract_dynamic_placeholders(user_question):
-    # Process the user question through SpaCy NER model
     doc = nlp(user_question)
-
-    # Initialize dictionary to store dynamic placeholders
     dynamic_placeholders = {}
-
-    # Extract entities and map them to placeholders
     for ent in doc.ents:
-        if ent.label_ == "EVENT":  # Assuming 'EVENT' is the label for event names (customize based on your model)
-            event_text = ent.text.title()  # Capitalize the first letter of each word in the event name
-            dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"  # Bold the entity
-        elif ent.label_ == "GPE":  # GPE is the label for cities in SpaCy
-            city_text = ent.text.title()  # Capitalize the first letter of each word in the city
-            dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"  # Bold the entity
+        if ent.label_ == "EVENT":
+            event_text = ent.text.title()
+            dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"
+        elif ent.label_ == "GPE":
+            city_text = ent.text.title()
+            dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"
 
-    # If no event or city was found, add default values
     if '{{EVENT}}' not in dynamic_placeholders:
         dynamic_placeholders['{{EVENT}}'] = "event"
     if '{{CITY}}' not in dynamic_placeholders:
         dynamic_placeholders['{{CITY}}'] = "city"
-
     return dynamic_placeholders
 
-# Generate a chatbot response
+# Function to generate response with DistilGPT2
 def generate_response(model, tokenizer, instruction, max_length=256):
     model.eval()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
     input_text = f"Instruction: {instruction} Response:"
-    
-    inputs = tokenizer(input_text, return_tensors="pt", padding=True).to(device)
+
+    inputs = tokenizer(input_text, return_tensors="pt", padding=True, truncation=True, max_length=512) # Added truncation and max_length
+    inputs = inputs.to(device)
 
     with torch.no_grad():
         outputs = model.generate(
-            input_ids=inputs["input_ids"],
-            attention_mask=inputs["attention_mask"],
+            **inputs,
             max_length=max_length,
             num_return_sequences=1,
             temperature=0.7,
@@ -143,32 +166,84 @@ def generate_response(model, tokenizer, instruction, max_length=256):
         )
 
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    response_start = response.find("Response:") + len("Response:")  # Extract after "Response:"
+    response_start = response.find("Response:") + len("Response:")
     return response[response_start:].strip()
 
+
 # Streamlit UI
-def main():
-    st.title("🎟️ Advanced Events Ticketing Chatbot")
-    st.write("Ask me about ticket cancellations, refunds, or any event-related inquiries!")
+st.title("🎟️ Advanced Events Ticketing Chatbot")
+st.write("Ask me about ticket cancellations, refunds, or any event-related inquiries!")
 
-    model, tokenizer = load_model_and_tokenizer()
-    if model is None or tokenizer is None:
-        st.error("Failed to load the model.")
-        return
+# Initialize chat history in session state
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
-    user_input = st.text_input("You:", "")
-    
-    if user_input:
-        # Extract dynamic placeholders from user input
-        dynamic_placeholders = extract_dynamic_placeholders(user_input)
+# Display chat messages from history on app rerun
+for message in st.session_state.chat_history:
+    with st.chat_message(message["role"], avatar=message["avatar"]):
+        st.markdown(message["content"], unsafe_allow_html=True)
 
-        with st.spinner("Generating response..."):
-            response = generate_response(model, tokenizer, user_input)
+# Input box at the bottom
+if prompt := st.chat_input("Enter your question:"):
+    prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
 
-            # Replace placeholders in the response
-            full_response = replace_placeholders(response, dynamic_placeholders, static_placeholders)
-            
-            st.success(full_response)
+    if not prompt.strip():
+        st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(prompt, unsafe_allow_html=True)
+        with st.chat_message("assistant", avatar="🤖"):
+            st.error("⚠️ Please enter a valid question. You cannot send empty messages.")
+        st.session_state.chat_history.append({"role": "assistant", "content": "Please enter a valid question. You cannot send empty messages.", "avatar": "🤖"})
+    else:
+        st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(prompt, unsafe_allow_html=True)
 
-if __name__ == "__main__":
-    main()
+        with st.chat_message("assistant", avatar="🤖"):
+            message_placeholder = st.empty()
+            full_response = ""
+            thinking_dots = "... Thinking..."
+            message_placeholder.markdown(thinking_dots)
+            time.sleep(0.5)
+
+            dynamic_placeholders = extract_dynamic_placeholders(prompt)
+
+            # Generate response using DistilGPT2
+            bot_response = generate_response(model, tokenizer, prompt)
+            response_with_placeholders = replace_placeholders(bot_response, dynamic_placeholders, static_placeholders)
+
+            full_response = response_with_placeholders
+
+            message_placeholder.empty()
+            message_placeholder.markdown(full_response, unsafe_allow_html=True)
+
+        st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+
+# Conditionally display reset button
+if st.session_state.chat_history:
+    st.markdown(
+        """
+        <style>
+        .stButton>button {
+            background: linear-gradient(90deg, #ff8a00, #e52e71);
+            color: white !important;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .stButton>button:hover {
+            transform: scale(1.05);
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
+            color: white !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("Reset Chat", key="reset_button"):
+        st.session_state.chat_history = []
+        st.rerun()
