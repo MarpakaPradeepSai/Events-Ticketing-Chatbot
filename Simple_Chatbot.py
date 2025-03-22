@@ -1,22 +1,25 @@
 import streamlit as st
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
 import torch
-from transformers import GPT2Tokenizer, GPT2LMHeadModel
-import requests
-import os
 import spacy
-import time  # For simulating processing time
+import os
+import requests
+import time
 
 # Function to download model files from GitHub
 def download_model_files(model_dir="/tmp/DistilGPT2_Model"):
     os.makedirs(model_dir, exist_ok=True)
+
     GITHUB_MODEL_URL = "https://github.com/MarpakaPradeepSai/Advanced-Events-Ticketing-Customer-Support-Chatbot/raw/main/DistilGPT2_Model"
     MODEL_FILES = [
-        "config.json", "generation_config.json", "merges.txt", "model.safetensors",
-        "special_tokens_map.json", "tokenizer_config.json", "vocab.json"
+        "config.json", "generation_config.json", "merges.txt", "model.safetensors", "special_tokens_map.json", 
+        "tokenizer_config.json", "vocab.json"
     ]
+
     for filename in MODEL_FILES:
         url = f"{GITHUB_MODEL_URL}/{filename}"
         local_path = os.path.join(model_dir, filename)
+
         if not os.path.exists(local_path):
             response = requests.get(url)
             if response.status_code == 200:
@@ -27,49 +30,25 @@ def download_model_files(model_dir="/tmp/DistilGPT2_Model"):
                 return False
     return True
 
-# Load model and tokenizer for DistilGPT2
+# Load DistilGPT2 model and tokenizer
 @st.cache_resource(show_spinner=False)
 def load_model_and_tokenizer():
     model_dir = "/tmp/DistilGPT2_Model"
     if not download_model_files(model_dir):
         st.error("Model download failed. Check your internet connection or GitHub URL.")
         return None, None
+
     model = GPT2LMHeadModel.from_pretrained(model_dir, trust_remote_code=True)
     tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
     return model, tokenizer
 
-# Function to generate response from DistilGPT2 model
-def generate_response(model, tokenizer, instruction, max_length=256):
-    model.eval()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
-
-    input_text = f"Instruction: {instruction} Response:"
-    inputs = tokenizer(input_text, return_tensors="pt", padding=True).to(device)
-
-    with torch.no_grad():
-        outputs = model.generate(
-            input_ids=inputs["input_ids"],
-            attention_mask=inputs["attention_mask"],
-            max_length=max_length,
-            num_return_sequences=1,
-            temperature=0.7,
-            top_p=0.95,
-            do_sample=True,
-            pad_token_id=tokenizer.eos_token_id
-        )
-
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    response_start = response.find("Response:") + len("Response:")
-    return response[response_start:].strip()
-
-# Load spaCy model for NER
+# Load the spaCy model for NER
 @st.cache_resource
 def load_spacy_model():
     nlp = spacy.load("en_core_web_trf")
     return nlp
 
-# Function to replace placeholders (static and dynamic)
+# Function to replace placeholders (static + dynamic placeholders)
 def replace_placeholders(response, dynamic_placeholders, static_placeholders):
     for placeholder, value in static_placeholders.items():
         response = response.replace(placeholder, value)
@@ -77,19 +56,22 @@ def replace_placeholders(response, dynamic_placeholders, static_placeholders):
         response = response.replace(placeholder, value)
     return response
 
-# Function to extract dynamic placeholders using SpaCy
+# Function to extract dynamic placeholders using spaCy NER model
 def extract_dynamic_placeholders(user_question):
+    # Process the user question through SpaCy NER model
     doc = nlp(user_question)
     dynamic_placeholders = {}
 
+    # Extract entities and map them to placeholders
     for ent in doc.ents:
-        if ent.label_ == "EVENT":
-            event_text = ent.text.title()
-            dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"
-        elif ent.label_ == "GPE":  # Geopolitical entities (cities)
-            city_text = ent.text.title()
-            dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"
+        if ent.label_ == "EVENT":  # Assuming 'EVENT' is the label for event names
+            event_text = ent.text.title()  # Capitalize the first letter of each word in the event name
+            dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"  # Bold the entity
+        elif ent.label_ == "GPE":  # GPE is the label for cities in SpaCy
+            city_text = ent.text.title()  # Capitalize the first letter of each word in the city
+            dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"  # Bold the entity
 
+    # If no event or city was found, add default values
     if '{{EVENT}}' not in dynamic_placeholders:
         dynamic_placeholders['{{EVENT}}'] = "event"
     if '{{CITY}}' not in dynamic_placeholders:
@@ -97,7 +79,7 @@ def extract_dynamic_placeholders(user_question):
 
     return dynamic_placeholders
 
-# Static placeholders (these do not change)
+# Static placeholders
 static_placeholders = {
     "{{CANCEL_TICKET_OPTION}}": "<b>Cancel Ticket</b>",
     "{{GET_REFUND_OPTION}}": "<b>Get Refund</b>",
@@ -134,73 +116,77 @@ static_placeholders = {
 }
 
 # Streamlit UI
-def main():
-    st.title("🎟️ Advanced Events Ticketing Chatbot")
-    st.write("Ask me about ticket cancellations, refunds, or any event-related inquiries!")
+st.title("Simple Events Ticketing Chatbot")
+st.write("Ask me anything about ticketing for your events!")
 
-    # Initialize chat history in session state
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
+# Initialize chat history in session state
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
-    # Load models
-    model, tokenizer = load_model_and_tokenizer()
-    nlp = load_spacy_model()
-    
-    if model is None or tokenizer is None:
-        st.error("Failed to load the model.")
-        return
+# Display chat messages from history on app rerun
+for message in st.session_state.chat_history:
+    with st.chat_message(message["role"], avatar=message["avatar"]):
+        st.markdown(message["content"], unsafe_allow_html=True)
 
-    # Display chat messages from history
-    for message in st.session_state.chat_history:
-        with st.chat_message(message["role"], avatar=message["avatar"]):
-            st.markdown(message["content"], unsafe_allow_html=True)
+# Input box at the bottom
+if prompt := st.chat_input("Enter your question:"):
+    # Capitalize the first letter of the user input
+    prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
 
-    # Input box at the bottom
-    if prompt := st.chat_input("Enter your question:"):
-        prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
+    # Handle empty or whitespace-only input
+    if not prompt.strip():
+        st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(prompt, unsafe_allow_html=True)
+        with st.chat_message("assistant", avatar="🤖"):
+            st.error("⚠️ Please enter a valid question. You cannot send empty messages.")
+        st.session_state.chat_history.append({"role": "assistant", "content": "Please enter a valid question. You cannot send empty messages.", "avatar": "🤖"})
+    else:
+        # Add user message to chat history
+        st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
+        # Display user message in chat message container
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(prompt, unsafe_allow_html=True)
 
-        # Handle empty or whitespace-only input
-        if not prompt.strip():
-            st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
-            with st.chat_message("user", avatar="👤"):
-                st.markdown(prompt, unsafe_allow_html=True)
-            with st.chat_message("assistant", avatar="🤖"):
-                st.error("⚠️ Please enter a valid question. You cannot send empty messages.")
-            st.session_state.chat_history.append({"role": "assistant", "content": "Please enter a valid question. You cannot send empty messages.", "avatar": "🤖"})
-        else:
-            st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
-            with st.chat_message("user", avatar="👤"):
-                st.markdown(prompt, unsafe_allow_html=True)
+        # Simulate bot thinking with a "typing" indicator
+        with st.chat_message("assistant", avatar="🤖"):
+            message_placeholder = st.empty()
+            full_response = ""
+            thinking_dots = "... Thinking..."
+            message_placeholder.markdown(thinking_dots)  # Show "Thinking..." initially
+            time.sleep(0.5)  # Small delay for visual effect
 
-            # Simulate bot thinking with a "typing" indicator
-            with st.chat_message("assistant", avatar="🤖"):
-                message_placeholder = st.empty()
-                full_response = ""
-                thinking_dots = "... Thinking..."
-                message_placeholder.markdown(thinking_dots)
-                time.sleep(0.5)
+            # Extract dynamic placeholders
+            dynamic_placeholders = extract_dynamic_placeholders(prompt)
 
-                # Generate response using DistilGPT2
-                response = generate_response(model, tokenizer, prompt)
+            # Load the DistilGPT2 model and tokenizer
+            model, tokenizer = load_model_and_tokenizer()
+            if model is None or tokenizer is None:
+                st.error("Error loading the model!")
+                st.stop()
 
-                # Extract dynamic placeholders
-                dynamic_placeholders = extract_dynamic_placeholders(prompt)
+            # Tokenize input
+            inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
 
-                # Replace static and dynamic placeholders
-                full_response = replace_placeholders(response, dynamic_placeholders, static_placeholders)
+            # Move input tensors to device (GPU if available)
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            model.to(device)
+            inputs = {key: value.to(device) for key, value in inputs.items()}
 
-                # Show final response
-                message_placeholder.empty()
-                message_placeholder.markdown(full_response, unsafe_allow_html=True)
+            # Generate a response using the model
+            with torch.no_grad():
+                outputs = model.generate(
+                    inputs["input_ids"],
+                    attention_mask=inputs["attention_mask"],
+                    max_length=256,
+                    num_return_sequences=1,
+                    temperature=0.7,
+                    top_p=0.9
+                )
 
-            # Add assistant message to chat history
+            generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+            full_response = replace_placeholders(generated_text, dynamic_placeholders, static_placeholders)
+            message_placeholder.markdown(full_response, unsafe_allow_html=True)
+
+            # Update chat history
             st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
-
-    # Conditionally display reset button
-    if st.session_state.chat_history:
-        if st.button("Reset Chat", key="reset_button"):
-            st.session_state.chat_history = []
-            st.rerun()
-
-if __name__ == "__main__":
-    main()
