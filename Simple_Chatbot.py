@@ -1,11 +1,11 @@
 import streamlit as st
-import torch
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
-import requests
-import os
-import warnings
+import torch
 import spacy
-import time
+import os
+import requests
+import time  # For simulating processing time
+import warnings
 
 warnings.filterwarnings('ignore')
 
@@ -41,13 +41,6 @@ def download_model_files(model_dir="/tmp/DistilGPT2_Model"):
                 return False
     return True
 
-# Load spaCy model for NER
-@st.cache_resource
-def load_spacy_model():
-    nlp = spacy.load("en_core_web_trf")
-    print(f"SpaCy model loaded: {nlp}") # Debug: Check if SpaCy model is loaded
-    return nlp
-
 # Load model and tokenizer
 @st.cache_resource(show_spinner=False)
 def load_model_and_tokenizer():
@@ -68,7 +61,7 @@ def generate_response(model, tokenizer, instruction, max_length=256):
 
     input_text = f"Instruction: {instruction} Response:"
 
-    inputs = tokenizer(input_text, return_tensors="pt", padding=True, truncation=True).to(device)
+    inputs = tokenizer(input_text, return_tensors="pt", padding=True).to(device)
 
     with torch.no_grad():
         outputs = model.generate(
@@ -86,7 +79,23 @@ def generate_response(model, tokenizer, instruction, max_length=256):
     response_start = response.find("Response:") + len("Response:")
     return response[response_start:].strip()
 
-# Define static placeholders
+# Load the spaCy model for NER
+@st.cache_resource
+def load_spacy_model():
+    nlp = spacy.load("en_core_web_trf")
+    return nlp
+
+# Initialize the spaCy model
+nlp = load_spacy_model()
+
+# Load the fine-tuned model and tokenizer
+model, tokenizer = load_model_and_tokenizer()
+
+# Check if the model and tokenizer loaded successfully
+if model is None or tokenizer is None:
+    st.stop()  # Halt execution if model loading fails
+
+# Static placeholders
 static_placeholders = {
     "{{CANCEL_TICKET_OPTION}}": "<b>Cancel Ticket</b>",
     "{{GET_REFUND_OPTION}}": "<b>Get Refund</b>",
@@ -124,20 +133,16 @@ static_placeholders = {
 
 # Function to replace placeholders
 def replace_placeholders(response, dynamic_placeholders, static_placeholders):
-    print(f"Inside replace_placeholders: response='{response}', dynamic_placeholders='{dynamic_placeholders}', static_placeholders='{static_placeholders}'") # Debug
     for placeholder, value in static_placeholders.items():
         response = response.replace(placeholder, value)
     for placeholder, value in dynamic_placeholders.items():
         response = response.replace(placeholder, value)
-    print(f"After replace_placeholders: response='{response}'") # Debug
     return response
 
 # Function to extract dynamic placeholders using SpaCy
-def extract_dynamic_placeholders(user_question, nlp):
-    print(f"Inside extract_dynamic_placeholders: user_question='{user_question}'") # Debug
+def extract_dynamic_placeholders(user_question):
     # Process the user question through SpaCy NER model
     doc = nlp(user_question)
-    print(f"SpaCy Doc Entities: {doc.ents}") # Debug: Print SpaCy entities
 
     # Initialize dictionary to store dynamic placeholders
     dynamic_placeholders = {}
@@ -151,7 +156,6 @@ def extract_dynamic_placeholders(user_question, nlp):
             city_text = ent.text.title()  # Capitalize the first letter of each word in the city
             dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"  # Bold the entity
 
-    print(f"Extracted dynamic_placeholders: {dynamic_placeholders}") # Debug
     # If no event or city was found, add default values
     if '{{EVENT}}' not in dynamic_placeholders:
         dynamic_placeholders['{{EVENT}}'] = "event"
@@ -161,102 +165,89 @@ def extract_dynamic_placeholders(user_question, nlp):
     return dynamic_placeholders
 
 # Streamlit UI
-def main():
-    st.title("🎟️ Advanced Events Ticketing Chatbot")
-    st.write("Ask me about ticket cancellations, refunds, or any event-related inquiries!")
+st.title("🎟️ Advanced Events Ticketing Chatbot")
+st.write("Ask me about ticket cancellations, refunds, or any event-related inquiries!")
 
-    nlp = load_spacy_model()
-    model, tokenizer = load_model_and_tokenizer()
+# Initialize chat history in session state
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
-    if model is None or tokenizer is None or nlp is None:
-        st.error("Failed to load the model, tokenizer, or spaCy model.")
-        return
+# Display chat messages from history on app rerun
+for message in st.session_state.chat_history:
+    with st.chat_message(message["role"], avatar=message["avatar"]):
+        st.markdown(message["content"], unsafe_allow_html=True)
 
-    # Initialize chat history in session state
-    if "chat_history" not in st.session_state:
+# Input box at the bottom
+if prompt := st.chat_input("Enter your question:"): # Renamed user_question to prompt for clarity
+
+    # Capitalize the first letter of the user input
+    prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
+
+    # Handle empty or whitespace-only input
+    if not prompt.strip():
+        st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"}) # Still add empty input to history to show in chat
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(prompt, unsafe_allow_html=True) # Display empty input in chat
+        with st.chat_message("assistant", avatar="🤖"):
+            st.error("⚠️ Please enter a valid question. You cannot send empty messages.") # Display error for empty input
+        st.session_state.chat_history.append({"role": "assistant", "content": "Please enter a valid question. You cannot send empty messages.", "avatar": "🤖"}) # Add error to chat history
+    else:
+        # Add user message to chat history
+        st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
+        # Display user message in chat message container
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(prompt, unsafe_allow_html=True)
+
+        # Simulate bot thinking with a "typing" indicator
+        with st.chat_message("assistant", avatar="🤖"):
+            message_placeholder = st.empty()
+            full_response = ""
+            thinking_dots = "... Thinking..."
+            message_placeholder.markdown(thinking_dots) # Show "Thinking..." initially
+            time.sleep(0.5) # Small delay for visual effect
+
+            # Generate response from DistilGPT2
+            generated_response = generate_response(model, tokenizer, prompt)
+
+            # Extract dynamic placeholders
+            dynamic_placeholders = extract_dynamic_placeholders(prompt)
+
+            # Replace placeholders in the generated response
+            response = replace_placeholders(generated_response, dynamic_placeholders, static_placeholders)
+
+            full_response = response # Assign the final response
+
+            message_placeholder.empty() # Clear "Thinking..."
+            message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+
+        # Add assistant message to chat history
+        st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+
+# Conditionally display reset button
+if st.session_state.chat_history: # Check if chat_history is not empty
+    st.markdown(
+        """
+    <style>
+    .stButton>button {
+        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Original button gradient */
+        color: white !important;
+        border: none;
+        border-radius: 25px; /* Original button border-radius */
+        padding: 10px 20px;
+        font-size: 1.2em; /* Original button font-size */
+        font-weight: bold; /* Original button font-weight */
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease; /* Original button transition */
+    }
+    .stButton>button:hover {
+        transform: scale(1.05); /* Original button hover transform */
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Original button hover box-shadow */
+        color: white !important;
+    }
+    </style>
+    """,
+        unsafe_allow_html=True,
+    )
+    if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
-
-    # Display chat messages from history on app rerun
-    for message in st.session_state.chat_history:
-        with st.chat_message(message["role"], avatar=message["avatar"]):
-            st.markdown(message["content"], unsafe_allow_html=True)
-
-    # Input box at the bottom
-    if prompt := st.chat_input("Enter your question:"):
-        # Capitalize the first letter of the user input
-        prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
-
-        # Handle empty or whitespace-only input
-        if not prompt.strip():
-            st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"}) # Still add empty input to history to show in chat
-            with st.chat_message("user", avatar="👤"):
-                st.markdown(prompt, unsafe_allow_html=True) # Display empty input in chat
-            with st.chat_message("assistant", avatar="🤖"):
-                st.error("⚠️ Please enter a valid question. You cannot send empty messages.") # Display error for empty input
-            st.session_state.chat_history.append({"role": "assistant", "content": "Please enter a valid question. You cannot send empty messages.", "avatar": "🤖"}) # Add error to chat history
-        else:
-            # Add user message to chat history
-            st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
-            # Display user message in chat message container
-            with st.chat_message("user", avatar="👤"):
-                st.markdown(prompt, unsafe_allow_html=True)
-
-            # Simulate bot thinking with a "typing" indicator
-            with st.chat_message("assistant", avatar="🤖"):
-                message_placeholder = st.empty()
-                full_response = ""
-                thinking_dots = "... Thinking..."
-                message_placeholder.markdown(thinking_dots) # Show "Thinking..." initially
-                time.sleep(0.5) # Small delay for visual effect
-
-                print(f"User Prompt before NER: '{prompt}'") # Debug: Print user prompt
-
-                # Extract dynamic placeholders
-                dynamic_placeholders = extract_dynamic_placeholders(prompt, nlp)
-
-                # Generate response from DistilGPT2
-                raw_response = generate_response(model, tokenizer, prompt)
-                print(f"Raw response from DistilGPT2: '{raw_response}'") # Debug: Print raw response
-
-                # Replace placeholders in the generated response
-                response = replace_placeholders(raw_response, dynamic_placeholders, static_placeholders)
-
-                full_response = response # Assign the final response
-
-                message_placeholder.empty() # Clear "Thinking..."
-                message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
-
-            # Add assistant message to chat history
-            st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
-
-    # Conditionally display reset button
-    if st.session_state.chat_history: # Check if chat_history is not empty
-        st.markdown(
-            """
-            <style>
-            .stButton>button {
-            background: linear-gradient(90deg, #ff8a00, #e52e71); /* Original button gradient */
-            color: white !important;
-            border: none;
-            border-radius: 25px; /* Original button border-radius */
-            padding: 10px 20px;
-            font-size: 1.2em; /* Original button font-size */
-            font-weight: bold; /* Original button font-weight */
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease; /* Original button transition */
-            }
-            .stButton>button:hover {
-            transform: scale(1.05); /* Original button hover transform */
-            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Original button hover box-shadow */
-            color: white !important;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
-        if st.button("Reset Chat", key="reset_button"):
-            st.session_state.chat_history = []
-            st.rerun() # Rerun the Streamlit app to clear the chat display immediately
-
-if __name__ == "__main__":
-    main()
+        st.rerun() # Rerun the Streamlit app to clear the chat display immediately
