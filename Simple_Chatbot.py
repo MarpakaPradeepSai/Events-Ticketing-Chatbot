@@ -45,6 +45,7 @@ def download_model_files(model_dir="/tmp/DistilGPT2_Model"):
 @st.cache_resource
 def load_spacy_model():
     nlp = spacy.load("en_core_web_trf")
+    print(f"SpaCy model loaded: {nlp}") # Debug: Check if SpaCy model is loaded
     return nlp
 
 # Load model and tokenizer
@@ -87,11 +88,6 @@ def generate_response(model, tokenizer, instruction, max_length=256):
 
 # Define static placeholders
 static_placeholders = {
-    "{{WEBSITE_URL}}": "www.events-ticketing.com",
-    "{{SUPPORT_TEAM_LINK}}": "www.support-team.com",
-    "{{CONTACT_SUPPORT_LINK}}" : "www.support-team.com",
-    "{{SUPPORT_CONTACT_LINK}}" : "www.support-team.com",
-    "{{CANCEL_TICKET_SECTION}}": "<b>Cancel Ticket</b>",
     "{{CANCEL_TICKET_OPTION}}": "<b>Cancel Ticket</b>",
     "{{GET_REFUND_OPTION}}": "<b>Get Refund</b>",
     "{{UPGRADE_TICKET_INFORMATION}}": "<b>Upgrade Ticket Information</b>",
@@ -123,60 +119,25 @@ static_placeholders = {
     "{{PAYMENT_SECTION}}": "<b>Payment</b>",
     "{{PAYMENT_OPTION}}": "<b>Payment</b>",
     "{{CANCELLATION_SECTION}}": "<b>Cancellation</b>",
-    "{{CANCELLATION_OPTION}}": "<b>Cancellation</b>",
-    "{{REFUND_OPTION}}": "<b>Refund</b>",
-    "{{TRANSFER_TICKET_OPTION}}": "<b>Transfer Ticket</b>",
-    "{{REFUND_STATUS_OPTION}}": "<b>Refund Status</b>",
-    "{{DELIVERY_SECTION}}": "<b>Delivery</b>",
-    "{{SELL_TICKET_OPTION}}": "<b>Sell Ticket</b>",
-    "{{CANCELLATION_FEE_INFORMATION}}": "<b>Cancellation Fee Information</b>",
-    "{{CUSTOMER_SUPPORT_PAGE}}": "<b>Customer Support</b>",
-    "{{PAYMENT_METHOD}}" : "<b>Payment</b>",
-    "{{VIEW_PAYMENT_METHODS}}": "<b>View Payment Methods</b>",
-    "{{VIEW_CANCELLATION_POLICY}}": "<b>View Cancellation Policy</b>",
-    "{{SUPPORT_ SECTION}}" : "<b>Support</b>",
-    "{{CUSTOMER_SUPPORT_SECTION}}" : "<b>Customer Support</b>",
-    "{{HELP_SECTION}}" : "<b>Help</b>",
-    "{{TICKET_INFORMATION}}" : "<b>Ticket Information</b>",
-    "{{UPGRADE_TICKET_BUTTON}}" : "<b>Upgrade Ticket</b>",
-    "{{CANCEL_TICKET_BUTTON}}" : "<b>Cancel Ticket</b>",
-    "{{GET_REFUND_BUTTON}}" : "<b>Get Refund</b>",
-    "{{PAYMENTS_HELP_SECTION}}" : "<b>Payments Help</b>",
-    "{{PAYMENTS_PAGE}}" : "<b>Payments</b>",
-    "{{TICKET_DETAILS}}" : "<b>Ticket Details</b>",
-    "{{TICKET_INFORMATION_PAGE}}" : "<b>Ticket Information</b>",
-    "{{REPORT_PAYMENT_PROBLEM}}" : "<b>Report Payment</b>",
-    "{{TICKET_OPTIONS}}" : "<b>Ticket Options</b>",
-    "{{SEND_BUTTON}}" : "<b>Send</b>",
-    "{{PAYMENT_ISSUE_OPTION}}" : "<b>Payment Issue</b>",
-    "{{CUSTOMER_SUPPORT_PORTAL}}" : "<b>Customer Support</b>",
-    "{{UPGRADE_TICKET_OPTION}}" : "<b>Upgrade Ticket</b>",
-    "{{TICKET_AVAILABILITY_TAB}}" : "<b>Ticket Availability</b>",
-    "{{TRANSFER_TICKET_BUTTON}}" : "<b>Transfer Ticket</b>",
-    "{{TICKET_MANAGEMENT}}" : "<b>Ticket Management</b>",
-    "{{TICKET_STATUS_TAB}}" : "<b>Ticket Status</b>",
-    "{{TICKETING_PAGE}}" : "<b>Ticketing</b>",
-    "{{TICKET_TRANSFER_TAB}}" : "<b>Ticket Transfer</b>",
-    "{{CURRENT_TICKET_DETAILS}}" : "<b>Current Ticket Details</b>",
-    "{{UPGRADE_OPTION}}" : "<b>Upgrade</b>",
-    "{{CONNECT_WITH_ORGANIZER}}" : "<b>Connect with Organizer</b>",
-    "{{TICKETS_TAB}}" : "<b>Tickets</b>",
-    "{{ASSISTANCE_SECTION}}" : "<b>Assistance Section</b>",
-
+    "{{CANCELLATION_OPTION}}": "<b>Cancellation</b>"
 }
 
 # Function to replace placeholders
 def replace_placeholders(response, dynamic_placeholders, static_placeholders):
+    print(f"Inside replace_placeholders: response='{response}', dynamic_placeholders='{dynamic_placeholders}', static_placeholders='{static_placeholders}'") # Debug
     for placeholder, value in static_placeholders.items():
         response = response.replace(placeholder, value)
     for placeholder, value in dynamic_placeholders.items():
         response = response.replace(placeholder, value)
+    print(f"After replace_placeholders: response='{response}'") # Debug
     return response
 
 # Function to extract dynamic placeholders using SpaCy
 def extract_dynamic_placeholders(user_question, nlp):
+    print(f"Inside extract_dynamic_placeholders: user_question='{user_question}'") # Debug
     # Process the user question through SpaCy NER model
     doc = nlp(user_question)
+    print(f"SpaCy Doc Entities: {doc.ents}") # Debug: Print SpaCy entities
 
     # Initialize dictionary to store dynamic placeholders
     dynamic_placeholders = {}
@@ -190,6 +151,7 @@ def extract_dynamic_placeholders(user_question, nlp):
             city_text = ent.text.title()  # Capitalize the first letter of each word in the city
             dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"  # Bold the entity
 
+    print(f"Extracted dynamic_placeholders: {dynamic_placeholders}") # Debug
     # If no event or city was found, add default values
     if '{{EVENT}}' not in dynamic_placeholders:
         dynamic_placeholders['{{EVENT}}'] = "event"
@@ -247,11 +209,14 @@ def main():
                 message_placeholder.markdown(thinking_dots) # Show "Thinking..." initially
                 time.sleep(0.5) # Small delay for visual effect
 
+                print(f"User Prompt before NER: '{prompt}'") # Debug: Print user prompt
+
                 # Extract dynamic placeholders
                 dynamic_placeholders = extract_dynamic_placeholders(prompt, nlp)
 
                 # Generate response from DistilGPT2
                 raw_response = generate_response(model, tokenizer, prompt)
+                print(f"Raw response from DistilGPT2: '{raw_response}'") # Debug: Print raw response
 
                 # Replace placeholders in the generated response
                 response = replace_placeholders(raw_response, dynamic_placeholders, static_placeholders)
