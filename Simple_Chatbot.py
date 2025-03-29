@@ -186,9 +186,9 @@ def extract_dynamic_placeholders(user_question):
 st.markdown(
     """
     <style>
-    /* Default button style (for "Ask this question" button) */
+    /* Default button style (orange-pink gradient for most buttons including Reset Chat) */
     .stButton>button {
-        background: linear-gradient(90deg, #4a148c, #3f51b5); /* Blue-purple gradient */
+        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Original orange-pink gradient */
         color: white !important;
         border: none;
         border-radius: 25px;
@@ -213,10 +213,11 @@ st.markdown(
         transform: scale(0.98);
     }
 
-    /* Specific style for "Reset Chat" button - Overrides default style */
-    div[data-testid="stHorizontalBlock"] > div:last-child > div > button { /* Target the last button in horizontal block */
-        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Original orange-pink gradient for Reset Chat */
+    /* Specific style for "Ask this question" button using data-testid */
+    div[data-testid="stHorizontalBlock"] > div:first-child > div > button { /* Target the FIRST button in horizontal block (Ask this question) */
+        background: linear-gradient(90deg, #4a148c, #3f51b5); /* Blue-purple gradient for "Ask this question" */
     }
+
 
     </style>
     """,
