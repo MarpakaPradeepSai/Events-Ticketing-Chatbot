@@ -236,6 +236,20 @@ def extract_dynamic_placeholders(user_question):
 
     return dynamic_placeholders
 
+# Custom CSS for button alignment
+st.markdown(
+    """
+    <style>
+        .stButton>button {
+            vertical-align: middle; /* Align button text vertically in the middle */
+            margin-top: 0px !important; /* Adjust top margin to align with selectbox if needed */
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
 # Streamlit UI
 st.title("Simple Events Ticketing Chatbot")
 st.write("Ask me anything about ticketing for your events!")
