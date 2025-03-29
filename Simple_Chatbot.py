@@ -236,7 +236,7 @@ def extract_dynamic_placeholders(user_question):
 
     return dynamic_placeholders
 
-# Custom CSS for button alignment and "Ask this question" & "Reset Chat" button style
+# Custom CSS for button alignment and styling for "Ask this question" button (moved here to be always applied)
 st.markdown(
     """
     <style>
@@ -244,10 +244,8 @@ st.markdown(
             vertical-align: middle; /* Align button text vertically in the middle */
             margin-top: 0px !important; /* Adjust top margin to align with selectbox if needed */
         }
-
-        /* Style for "Ask this question" and "Reset Chat" buttons */
-        div.stButton > button:has-text("Ask this question"),
-        div.stButton > button:has-text("Reset Chat") {
+        /* Style for both "Ask this question" and "Reset Chat" buttons */
+        div.stButton > button:first-child {
             background: linear-gradient(90deg, #ff8a00, #e52e71);
             color: white !important;
             border: none;
@@ -258,8 +256,7 @@ st.markdown(
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        div.stButton > button:has-text("Ask this question"):hover,
-        div.stButton > button:has-text("Reset Chat"):hover {
+        div.stButton > button:first-child:hover {
             transform: scale(1.05);
             box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
             color: white !important;
@@ -407,31 +404,9 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
         st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
 
 
-# Conditionally display reset button
-if st.session_state.chat_history: # Check if chat_history is not empty
-    st.markdown(
-        """
-        <style>
-        .stButton>button {
-            background: linear-gradient(90deg, #ff8a00, #e52e71); /* Original button gradient */
-            color: white !important;
-            border: none;
-            border-radius: 25px; /* Original button border-radius */
-            padding: 10px 20px;
-            font-size: 1.2em; /* Original button font-size */
-            font-weight: bold; /* Original button font-weight */
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease; /* Original button transition */
-        }
-        .stButton>button:hover {
-            transform: scale(1.05); /* Original button hover transform */
-            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Original button hover box-shadow */
-            color: white !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-    if st.button("Reset Chat", key="reset_button"):
-        st.session_state.chat_history = []
-        st.rerun() # Rerun the Streamlit app to clear the chat display immediately
+# Reset chat button (always displayed now but conditionally styling is removed and style is applied above)
+st.button("Reset Chat", key="reset_button") # Removed conditional styling
+
+if st.button("Reset Chat", key="reset_button"):
+    st.session_state.chat_history = []
+    st.rerun() # Rerun the Streamlit app to clear the chat display immediately
