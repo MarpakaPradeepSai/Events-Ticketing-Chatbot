@@ -236,7 +236,7 @@ def extract_dynamic_placeholders(user_question):
 
     return dynamic_placeholders
 
-# Custom CSS for button alignment and "Ask this question" button style
+# Custom CSS for button alignment and "Ask this question" & "Reset Chat" button style
 st.markdown(
     """
     <style>
@@ -245,8 +245,9 @@ st.markdown(
             margin-top: 0px !important; /* Adjust top margin to align with selectbox if needed */
         }
 
-        /* Style for "Ask this question" button */
-        .stButton>button:nth-child(4) { /* Target the 4th button, adjust if needed based on layout */
+        /* Style for "Ask this question" and "Reset Chat" buttons */
+        div.stButton > button:has-text("Ask this question"),
+        div.stButton > button:has-text("Reset Chat") {
             background: linear-gradient(90deg, #ff8a00, #e52e71);
             color: white !important;
             border: none;
@@ -257,7 +258,8 @@ st.markdown(
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .stButton>button:nth-child(4):hover {
+        div.stButton > button:has-text("Ask this question"):hover,
+        div.stButton > button:has-text("Reset Chat"):hover {
             transform: scale(1.05);
             box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
             color: white !important;
