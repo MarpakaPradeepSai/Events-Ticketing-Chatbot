@@ -236,13 +236,31 @@ def extract_dynamic_placeholders(user_question):
 
     return dynamic_placeholders
 
-# Custom CSS for button alignment
+# Custom CSS for button alignment and "Ask this question" button style
 st.markdown(
     """
     <style>
         .stButton>button {
             vertical-align: middle; /* Align button text vertically in the middle */
             margin-top: 0px !important; /* Adjust top margin to align with selectbox if needed */
+        }
+
+        /* Style for "Ask this question" button */
+        .stButton>button:nth-child(4) { /* Target the 4th button, adjust if needed based on layout */
+            background: linear-gradient(90deg, #ff8a00, #e52e71);
+            color: white !important;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .stButton>button:nth-child(4):hover {
+            transform: scale(1.05);
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
+            color: white !important;
         }
     </style>
     """,
