@@ -238,21 +238,17 @@ example_queries = [
     "How to track my refund?",
 ]
 
-# Use columns for better layout of selectbox and button
-col1, col2 = st.columns([3, 1]) # Adjust ratio as needed
+# Dropdown and Button section (always displayed at the top)
+selected_query = st.selectbox(
+    "Choose a query from examples:",
+    [""] + example_queries,
+    key="query_selectbox",
+    label_visibility="collapsed" # Hide label if title is clear enough
+)
 
-with col1:
-    selected_query = st.selectbox(
-        "Choose a query from examples:",
-        [""] + example_queries,
-        key="query_selectbox",
-        label_visibility="collapsed" # Hide label if title is clear enough
-    )
+# Place the button directly below the selectbox
+process_query_button = st.button("Ask this question", key="query_button") # Shorter text might fit better
 
-with col2:
-    # Add placeholder text or adjust alignment if needed
-    # st.write("") # Use empty write for vertical spacing if needed
-    process_query_button = st.button("Ask this", key="query_button") # Shorter text might fit better
 
 # Initialize chat history in session state
 if "chat_history" not in st.session_state:
