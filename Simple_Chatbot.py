@@ -120,8 +120,8 @@ def extract_dynamic_placeholders(user_question):
 st.title("Simple Events Ticketing Chatbot")
 st.write("Ask me anything about ticketing for your events!")
 
-# Display the reference questions box
-st.subheader("You can ask the chatbot these types of questions:")
+# Display the reference questions select box
+st.subheader("You can select from the following questions:")
 reference_questions = [
     "How do I buy a ticket?",
     "How can I cancel my ticket?",
@@ -134,16 +134,15 @@ reference_questions = [
     "How can I check upcoming events in my city?"
 ]
 
-st.markdown(
-    """
-    <div style="background-color:#f0f0f0; padding: 10px; border-radius: 5px;">
-    <ul style="list-style-type: none;">
-    """ +
-    "".join([f"<li>{q}</li>" for q in reference_questions]) +
-    """
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
+# Add a select box for the user to choose a reference question
+selected_question = st.selectbox("Choose a reference question:", reference_questions)
+
+# Button to autofill the input with the selected question
+if st.button("Ask this question"):
+    st.session_state.chat_history.append({"role": "user", "content": selected_question, "avatar": "👤"})
+    # Display user message in chat message container
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(selected_question, unsafe_allow_html=True)
 
 # Initialize chat history in session state
 if "chat_history" not in st.session_state:
