@@ -254,9 +254,12 @@ example_queries = [
     "How to track my refund?",
 ]
 
-# Initialize session state to track if the first query has been made
-if "first_query_made" not in st.session_state:
-    st.session_state.first_query_made = False
+# Dropdown and Button section (always displayed at the top)
+col1, col2 = st.columns([3, 1])  # Adjust column widths as needed
+with col1:
+    selected_query = st.selectbox("Choose a query from examples:", [""] + example_queries, key="query_selectbox")
+with col2:
+    process_query_button = st.button("Ask", key="query_button")
 
 # Initialize chat history in session state
 if "chat_history" not in st.session_state:
@@ -267,64 +270,57 @@ for message in st.session_state.chat_history:
     with st.chat_message(message["role"], avatar=message["avatar"]):
         st.markdown(message["content"], unsafe_allow_html=True)
 
-# Display dropdown and button only if it's the first query
-if not st.session_state.first_query_made:
-    col1, col2 = st.columns([3, 1])  # Adjust column widths as needed
-    with col1:
-        selected_query = st.selectbox("Choose a query from examples:", [""] + example_queries, key="query_selectbox")
-    with col2:
-        process_query_button = st.button("Ask", key="query_button")
 
-    if process_query_button and selected_query:
-        prompt_from_dropdown = selected_query
-        # Capitalize the first letter of the user input
-        prompt_from_dropdown = prompt_from_dropdown[0].upper() + prompt_from_dropdown[1:] if prompt_from_dropdown else prompt_from_dropdown
+# Process selected query from dropdown if button is clicked and query is selected
+if process_query_button and selected_query:
+    prompt_from_dropdown = selected_query
+    # Capitalize the first letter of the user input
+    prompt_from_dropdown = prompt_from_dropdown[0].upper() + prompt_from_dropdown[1:] if prompt_from_dropdown else prompt_from_dropdown
 
-        # Add user message to chat history
-        st.session_state.chat_history.append({"role": "user", "content": prompt_from_dropdown, "avatar": "👤"})
-        # Display user message in chat message container
-        with st.chat_message("user", avatar="👤"):
-            st.markdown(prompt_from_dropdown, unsafe_allow_html=True)
+    # Add user message to chat history
+    st.session_state.chat_history.append({"role": "user", "content": prompt_from_dropdown, "avatar": "👤"})
+    # Display user message in chat message container
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(prompt_from_dropdown, unsafe_allow_html=True)
 
-        # Simulate bot thinking with a "generating response..." indicator and spinner
-        with st.chat_message("assistant", avatar="🤖"):
-            message_placeholder = st.empty()
-            full_response = ""
-            generating_response_text = "Generating response..."
-            # Display spinner and "Generating response..." text
-            with st.spinner(generating_response_text):
+    # Simulate bot thinking with a "generating response..." indicator and spinner
+    with st.chat_message("assistant", avatar="🤖"):
+        message_placeholder = st.empty()
+        full_response = ""
+        generating_response_text = "Generating response..."
+        # Display spinner and "Generating response..." text
+        with st.spinner(generating_response_text):
 
-                # Extract dynamic placeholders
-                dynamic_placeholders = extract_dynamic_placeholders(prompt_from_dropdown)
+            # Extract dynamic placeholders
+            dynamic_placeholders = extract_dynamic_placeholders(prompt_from_dropdown)
 
-                # Tokenize input
-                inputs = tokenizer(prompt_from_dropdown, padding=True, truncation=True, return_tensors="pt")
-                inputs = {key: value.to(device) for key, value in inputs.items()}
+            # Tokenize input
+            inputs = tokenizer(prompt_from_dropdown, padding=True, truncation=True, return_tensors="pt")
+            inputs = {key: value.to(device) for key, value in inputs.items()}
 
-                # Make prediction
-                with torch.no_grad():
-                    outputs = model(**inputs)
-                    logits = outputs.logits
-                prediction = torch.argmax(logits, dim=-1)
-                predicted_category_index = prediction.item()
-                predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")
+            # Make prediction
+            with torch.no_grad():
+                outputs = model(**inputs)
+                logits = outputs.logits
+            prediction = torch.argmax(logits, dim=-1)
+            predicted_category_index = prediction.item()
+            predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")
 
-                # Get and format response
-                initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand your request. Please try again.")
-                response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
+            # Get and format response
+            initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand your request. Please try again.")
+            response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
 
-                full_response = response # Assign the final response
+            full_response = response # Assign the final response
 
-            message_placeholder.empty() # Clear spinner and "Generating response..." text
-            message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+        message_placeholder.empty() # Clear spinner and "Generating response..." text
+        message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
 
-        # Add assistant message to chat history
-        st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
-        st.session_state.first_query_made = True # Set flag after the first query
+    # Add assistant message to chat history
+    st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+
 
 # Input box at the bottom (always displayed)
 if prompt := st.chat_input("Enter your question:"): # Renamed user_question to prompt for clarity
-    st.session_state.first_query_made = True # Set flag if user uses chat input
     # Capitalize the first letter of the user input
     prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
 
@@ -406,5 +402,4 @@ if st.session_state.chat_history: # Check if chat_history is not empty
     )
     if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
-        st.session_state.first_query_made = False # Reset the flag when chat is reset
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
