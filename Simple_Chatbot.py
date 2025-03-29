@@ -186,33 +186,55 @@ def extract_dynamic_placeholders(user_question):
 st.markdown(
     """
     <style>
+    /* Global button style */
     .stButton>button {
-        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Stylish gradient */
-        color: white !important; /* Ensure text is white */
+        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Stylish gradient - orange to pink */
+        color: white !important;
         border: none;
-        border-radius: 25px; /* Rounded corners */
-        padding: 10px 20px; /* Padding */
-        font-size: 1.2em; /* Font size */
-        font-weight: bold; /* Bold text */
+        border-radius: 25px;
+        padding: 10px 20px;
+        font-size: 1.2em;
+        font-weight: bold;
         cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease; /* Smooth transitions */
-        display: inline-flex; /* Helps with alignment */
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        margin-top: 5px; /* Adjust slightly if needed for alignment with selectbox */
-        width: auto; /* Fit content width */
-        min-width: 150px; /* Optional: ensure a minimum width */
+        margin-top: 5px;
+        width: auto;
+        min-width: 150px;
     }
     .stButton>button:hover {
-        transform: scale(1.05); /* Slightly larger on hover */
+        transform: scale(1.05);
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
+        color: white !important;
+    }
+    .stButton>button:active {
+        transform: scale(0.98);
+    }
+
+    /* Specific style for "Ask this question" button */
+    div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] > button:nth-child(2) { /* Target the second button in horizontal block - adjust if needed */
+        background: linear-gradient(90deg, #00bcd4, #009688); /* Different gradient - cyan to teal */
+        color: white !important; /* Ensure text is white */
+    }
+    div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] > button:nth-child(2):hover {
         box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Shadow on hover */
         color: white !important; /* Ensure text stays white on hover */
     }
-    .stButton>button:active {
-        transform: scale(0.98); /* Slightly smaller when clicked */
+
+
+    /* Specific style for "Reset Chat" button - for better distinction if needed - can be removed if default is enough*/
+    .stButton[data-testid="stButton"]:has(button#reset_button) > button {
+        background: linear-gradient(90deg, #dc143c, #8b0000); /* Red to dark red gradient */
+        color: white !important;
     }
-    /* Target the specific button container if needed, but general style is applied */
-    /* div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] { ... } */
+    .stButton[data-testid="stButton"]:has(button#reset_button) > button:hover {
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
+        color: white !important;
+    }
+
+
     </style>
     """,
     unsafe_allow_html=True,
@@ -359,4 +381,3 @@ if st.session_state.chat_history: # Check if chat_history is not empty
     if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
-
