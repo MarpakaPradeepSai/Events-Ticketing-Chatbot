@@ -8,26 +8,13 @@ import time  # For simulating processing time
 
 # Function to download files from GitHub (same as before)
 def download_from_github(repo_url, file_name, save_path):
-    # Check if file already exists to avoid re-downloading
-    if not os.path.exists(save_path):
-        print(f"Downloading {file_name}...")
-        file_url = f"{repo_url}/{file_name}"
-        try:
-            response = requests.get(file_url, stream=True) # Use stream=True for potentially large files
-            response.raise_for_status() # Raise an exception for bad status codes
-            with open(save_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192): # Download in chunks
-                    f.write(chunk)
-            print(f"Successfully downloaded {file_name}")
-        except requests.exceptions.RequestException as e:
-            st.error(f"Failed to download {file_name} from GitHub. Error: {e}")
-            # Optionally remove partially downloaded file
-            if os.path.exists(save_path):
-                os.remove(save_path)
-            st.stop() # Stop execution if download fails
+    file_url = f"{repo_url}/{file_name}"
+    response = requests.get(file_url)
+    if response.status_code == 200:
+        with open(save_path, 'wb') as f:
+            f.write(response.content)
     else:
-        print(f"{file_name} already exists. Skipping download.")
-
+        raise Exception(f"Failed to download {file_name} from GitHub. Status code: {response.status_code}")
 
 # Path where you want to save the downloaded model files (same as before)
 model_dir = "./albert_model"
@@ -37,79 +24,38 @@ if not os.path.exists(model_dir):
     os.makedirs(model_dir)
 
 # List of files to download from GitHub (same as before)
-# Using the specific commit hash for reproducibility, adjust if needed
-repo_url = 'https://raw.githubusercontent.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/93e06279b2c8f5154736b5882551e22c5d932e7b/ALBERT_Model' # Using commit hash
+repo_url = 'https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model'
 files = ['config.json', 'model.safetensors', 'special_tokens_map.json', 'spiece.model', 'tokenizer_config.json']
 
-# --- Download section ---
-# Display a message while downloading
-with st.spinner('Downloading model files (first time setup)...'):
-    all_files_exist = True
-    for file in files:
-        if not os.path.exists(os.path.join(model_dir, file)):
-            all_files_exist = False
-            download_from_github(repo_url, file, os.path.join(model_dir, file))
-
-    # Check if spaCy model needs downloading
-    spacy_model_name = "en_core_web_trf"
-    try:
-        spacy.load(spacy_model_name)
-        print(f"SpaCy model '{spacy_model_name}' already installed.")
-    except OSError:
-        print(f"SpaCy model '{spacy_model_name}' not found. Downloading...")
-        try:
-            spacy.cli.download(spacy_model_name)
-            print(f"Successfully downloaded '{spacy_model_name}'.")
-        except Exception as e:
-            st.error(f"Failed to download spaCy model '{spacy_model_name}'. Error: {e}")
-            st.stop()
-st.success("Model files and SpaCy model ready!")
-# --- End Download section ---
-
+# Download all model files from GitHub (same as before)
+for file in files:
+    download_from_github(repo_url, file, os.path.join(model_dir, file))
 
 # Load the spaCy model for NER (same as before)
 @st.cache_resource
-def load_spacy_model():
-    try:
-        # Verify download again before loading, just in case
-        spacy.load("en_core_web_trf")
-        nlp = spacy.load("en_core_web_trf")
-        return nlp
-    except OSError:
-         st.error("SpaCy model 'en_core_web_trf' not found. Please ensure it was downloaded correctly.")
-         st.stop()
-    except Exception as e:
-        st.error(f"Error loading spaCy model: {e}")
-        st.stop()
-
+def load_model():
+    nlp = spacy.load("en_core_web_trf")
+    return nlp
 
 # Initialize the spaCy model (same as before)
-nlp = load_spacy_model()
+nlp = load_model()
 
 # Load the fine-tuned model and tokenizer from the local directory (same as before)
 @st.cache_resource
 def load_model_and_tokenizer():
     try:
-        # Check if all required files exist before loading
-        required_files = ['config.json', 'model.safetensors', 'special_tokens_map.json', 'spiece.model', 'tokenizer_config.json']
-        missing_files = [f for f in required_files if not os.path.exists(os.path.join(model_dir, f))]
-        if missing_files:
-            st.error(f"Missing required model files in '{model_dir}': {', '.join(missing_files)}")
-            st.stop()
-
         model = AutoModelForSequenceClassification.from_pretrained(model_dir)
         tokenizer = AutoTokenizer.from_pretrained(model_dir)
         model.eval()  # Set to evaluation mode
         return model, tokenizer
     except Exception as e:
-        st.error(f"Error loading model or tokenizer from '{model_dir}': {str(e)}")
+        st.error(f"Error loading model or tokenizer: {str(e)}")
         return None, None
 
 model, tokenizer = load_model_and_tokenizer()
 
 # Check if the model and tokenizer loaded successfully (same as before)
 if model is None or tokenizer is None:
-    st.error("Model or tokenizer failed to load. Please check the logs and ensure files were downloaded correctly.")
     st.stop()  # Halt execution if model loading fails
 
 # Set device to CPU (Streamlit Cloud typically doesn't provide GPUs) (same as before)
@@ -175,17 +121,15 @@ responses = {
 
     'transfer_ticket': "To send your ticket for an {{EVENT}} in {{CITY}}, please adhere to these instructions:\n\n1. Access your account on {{WEBSITE_URL}}.\n2. Proceed to the {{TICKET_SECTION}} section found in your profile.\n3. Locate the specific ticket you wish to send from your listed purchases.\n4. Select the {{TRANSFER_TICKET_OPTION}} option available there.\n5. Input the recipient's email and provide any necessary details.\n6. Validate the transfer and await a confirmation email.\n\nIf you face any difficulties, refer to the help section or reach out to customer support.	",
 
-    'upgrade_ticket': "To upgrade your ticket for the upcoming event, please follow these instructions:\n\n1. Go to the {{WEBSITE_URL}}.\n2. Sign in with your username and password.\n3. Proceed to the {{TICKET_SECTION}} area.\n4. Find your current ticket purchase listed under {{UPGRADE_TICKET_INFORMATION}} and select the {{UPGRADE_TICKET_OPTION}} button.\n5. Adhere to the on-screen directions to select your intended upgrade and verify the modifications.\n\nIf you face any difficulties throughout this process, reach out to our support team for additional help.	",
-    "Unknown Category": "Sorry, I couldn't understand that specific request. Could you please rephrase or ask something else about event ticketing?" # Added response for unknown category
+    'upgrade_ticket': "To upgrade your ticket for the upcoming event, please follow these instructions:\n\n1. Go to the {{WEBSITE_URL}}.\n2. Sign in with your username and password.\n3. Proceed to the {{TICKET_SECTION}} area.\n4. Find your current ticket purchase listed under {{UPGRADE_TICKET_INFORMATION}} and select the {{UPGRADE_TICKET_OPTION}} button.\n5. Adhere to the on-screen directions to select your intended upgrade and verify the modifications.\n\nIf you face any difficulties throughout this process, reach out to our support team for additional help.	"
 }
-
 
 # Define static placeholders (same as before)
 static_placeholders = {
-    "{{WEBSITE_URL}}": "<b>www.events-ticketing.com</b>", # Made bold for emphasis
-    "{{SUPPORT_TEAM_LINK}}": "<b>www.support-team.com</b>", # Made bold
-    "{{CONTACT_SUPPORT_LINK}}" : "<b>www.support-team.com</b>",# Made bold
-    "{{SUPPORT_CONTACT_LINK}}" : "<b>www.support-team.com</b>",# Made bold
+    "{{WEBSITE_URL}}": "www.events-ticketing.com",
+    "{{SUPPORT_TEAM_LINK}}": "www.support-team.com",
+    "{{CONTACT_SUPPORT_LINK}}" : "www.support-team.com",
+    "{{SUPPORT_CONTACT_LINK}}" : "www.support-team.com",
     "{{CANCEL_TICKET_SECTION}}": "<b>Cancel Ticket</b>",
     "{{CANCEL_TICKET_OPTION}}": "<b>Cancel Ticket</b>",
     "{{GET_REFUND_OPTION}}": "<b>Get Refund</b>",
@@ -259,19 +203,12 @@ static_placeholders = {
     "{{ASSISTANCE_SECTION}}" : "<b>Assistance Section</b>"
 }
 
-
 # Function to replace placeholders (same as before)
 def replace_placeholders(response, dynamic_placeholders, static_placeholders):
-    # Replace static placeholders first
     for placeholder, value in static_placeholders.items():
         response = response.replace(placeholder, value)
-    # Replace dynamic placeholders
     for placeholder, value in dynamic_placeholders.items():
         response = response.replace(placeholder, value)
-    # Check for any remaining placeholders and replace with generic terms
-    response = response.replace("{{EVENT}}", "the event")
-    response = response.replace("{{CITY}}", "the city")
-    # Add more generic replacements if needed
     return response
 
 # Function to extract dynamic placeholders using SpaCy (same as before)
@@ -280,114 +217,156 @@ def extract_dynamic_placeholders(user_question):
     doc = nlp(user_question)
 
     # Initialize dictionary to store dynamic placeholders
-    dynamic_placeholders = {
-        '{{EVENT}}': "the event", # Default value
-        '{{CITY}}': "the city"   # Default value
-    }
-
-    event_found = False
-    city_found = False
+    dynamic_placeholders = {}
 
     # Extract entities and map them to placeholders
     for ent in doc.ents:
-        # Prioritize EVENT if both EVENT and GPE might overlap (e.g., "London Marathon")
-        if ent.label_ == "EVENT" and not event_found:
-            event_text = ent.text.title()
-            dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"
-            event_found = True
-        # Only assign GPE if an EVENT wasn't already found or if this entity is clearly separate
-        elif ent.label_ == "GPE" and not city_found:
-             # Avoid overwriting if EVENT already captured the location part
-             if not event_found or (event_found and ent.text.lower() not in dynamic_placeholders['{{EVENT}}'].lower()):
-                city_text = ent.text.title()
-                dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"
-                city_found = True
+        if ent.label_ == "EVENT":  # Assuming 'EVENT' is the label for event names (customize based on your model)
+            event_text = ent.text.title()  # Capitalize the first letter of each word in the event name
+            dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"  # Bold the entity
+        elif ent.label_ == "GPE":  # GPE is the label for cities in SpaCy
+            city_text = ent.text.title()  # Capitalize the first letter of each word in the city
+            dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"  # Bold the entity
 
-    # If still default after checking entities, use the generic terms without bolding
-    if dynamic_placeholders['{{EVENT}}'] == "the event":
-         dynamic_placeholders['{{EVENT}}'] = "the event" # Keep generic term
-    if dynamic_placeholders['{{CITY}}'] == "the city":
-         dynamic_placeholders['{{CITY}}'] = "the city" # Keep generic term
-
+    # If no event or city was found, add default values
+    if '{{EVENT}}' not in dynamic_placeholders:
+        dynamic_placeholders['{{EVENT}}'] = "event"
+    if '{{CITY}}' not in dynamic_placeholders:
+        dynamic_placeholders['{{CITY}}'] = "city"
 
     return dynamic_placeholders
 
+# Custom CSS for button alignment
+st.markdown(
+    """
+    <style>
+        .stButton>button {
+            vertical-align: middle; /* Align button text vertically in the middle */
+            margin-top: 0px !important; /* Adjust top margin to align with selectbox if needed */
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-# --- Streamlit UI ---
-# st.set_page_config(layout="wide") # Keep or remove wide layout based on preference
 
-st.title("🎟️ Simple Events Ticketing Chatbot")
-st.markdown("Ask me anything about ticketing for your events, or select an example below!")
+# Streamlit UI
+st.title("Simple Events Ticketing Chatbot")
+st.write("Ask me anything about ticketing for your events!")
 
 # Define example queries for the dropdown
 example_queries = [
     "How do I buy a ticket?",
     "What is the cancellation policy?",
-    "I want to get a refund for my ticket to the Rock Concert in Berlin.",
+    "I want to get a refund for my ticket.",
     "How can I change my ticket details?",
     "Tell me about upcoming events in London.",
     "How to contact customer service?",
     "What payment methods are accepted?",
-    "I need to report a payment issue for the Jazz Festival ticket.",
-    "Can I sell my ticket for the Gala?",
+    "I need to report a payment issue.",
+    "Can I sell my ticket?",
     "How to track my refund?",
-    "How do I transfer my ticket for the conference in New York?",
 ]
 
-# --- Dropdown and Button section (Vertically Aligned) ---
-# Place the selectbox first
-selected_query = st.selectbox(
-    "Choose a query from examples:",
-    options=[""] + example_queries, # Add an empty option as default/placeholder
-    index=0, # Default to the empty option
-    key="query_selectbox"
-    # label_visibility="collapsed" # Optional: Hide label if desired
-)
-
-# Place the button directly below the selectbox
-process_query_button = st.button("Ask this question", key="query_button") # Removed use_container_width
+# Dropdown and Button section (always displayed at the top)
+selected_query = st.selectbox("Choose a query from examples:", [""] + example_queries, key="query_selectbox")
+process_query_button = st.button("Ask this question", key="query_button") # Changed button text
 
 
-# --- Chat History Initialization and Display ---
+# Initialize chat history in session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Display chat messages from history
+# Display chat messages from history on app rerun
 for message in st.session_state.chat_history:
-    avatar = "👤" if message["role"] == "user" else "🤖"
-    with st.chat_message(message["role"], avatar=avatar):
+    with st.chat_message(message["role"], avatar=message["avatar"]):
         st.markdown(message["content"], unsafe_allow_html=True)
 
 
-# --- Function to handle message processing ---
-def process_message(input_text):
-    if not input_text or not input_text.strip():
-         st.error("⚠️ Please enter a valid question. You cannot send empty messages.")
-         # Optionally add the error to history if you want it displayed persistently
-         # st.session_state.chat_history.append({"role": "assistant", "content": "⚠️ Please enter a valid question...", "avatar": "🤖"})
-         return # Stop processing if input is empty
+# Process selected query from dropdown if button is clicked and query is selected
+if process_query_button and selected_query:
+    prompt_from_dropdown = selected_query
+    # Capitalize the first letter of the user input
+    prompt_from_dropdown = prompt_from_dropdown[0].upper() + prompt_from_dropdown[1:] if prompt_from_dropdown else prompt_from_dropdown
 
-    # Capitalize the first letter
-    input_text = input_text[0].upper() + input_text[1:] if input_text else input_text
-
-    # Add user message to chat history immediately
-    st.session_state.chat_history.append({"role": "user", "content": input_text})
+    # Add user message to chat history
+    st.session_state.chat_history.append({"role": "user", "content": prompt_from_dropdown, "avatar": "👤"})
+    # Display user message in chat message container
     with st.chat_message("user", avatar="👤"):
-        st.markdown(input_text, unsafe_allow_html=True)
+        st.markdown(prompt_from_dropdown, unsafe_allow_html=True)
 
-    # Display thinking indicator and process
+    # Simulate bot thinking with a "generating response..." indicator and spinner
     with st.chat_message("assistant", avatar="🤖"):
         message_placeholder = st.empty()
-        with st.spinner("Thinking..."):
-            try:
-                # 1. Extract dynamic placeholders
-                dynamic_placeholders = extract_dynamic_placeholders(input_text)
+        full_response = ""
+        generating_response_text = "Generating response..."
+        # Display spinner and "Generating response..." text
+        with st.spinner(generating_response_text):
 
-                # 2. Tokenize input
-                inputs = tokenizer(input_text, padding=True, truncation=True, return_tensors="pt", max_length=512) # Added max_length
+            # Extract dynamic placeholders
+            dynamic_placeholders = extract_dynamic_placeholders(prompt_from_dropdown)
+
+            # Tokenize input
+            inputs = tokenizer(prompt_from_dropdown, padding=True, truncation=True, return_tensors="pt")
+            inputs = {key: value.to(device) for key, value in inputs.items()}
+
+            # Make prediction
+            with torch.no_grad():
+                outputs = model(**inputs)
+                logits = outputs.logits
+            prediction = torch.argmax(logits, dim=-1)
+            predicted_category_index = prediction.item()
+            predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")
+
+            # Get and format response
+            initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand your request. Please try again.")
+            response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
+
+            full_response = response # Assign the final response
+
+        message_placeholder.empty() # Clear spinner and "Generating response..." text
+        message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+
+    # Add assistant message to chat history
+    st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+
+
+# Input box at the bottom (always displayed)
+if prompt := st.chat_input("Enter your question:"): # Renamed user_question to prompt for clarity
+    # Capitalize the first letter of the user input
+    prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
+
+    # Handle empty or whitespace-only input
+    if not prompt.strip():
+        st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"}) # Still add empty input to history to show in chat
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(prompt, unsafe_allow_html=True) # Display empty input in chat
+        with st.chat_message("assistant", avatar="🤖"):
+            st.error("⚠️ Please enter a valid question. You cannot send empty messages.") # Display error for empty input
+        st.session_state.chat_history.append({"role": "assistant", "content": "Please enter a valid question. You cannot send empty messages.", "avatar": "🤖"}) # Add error to chat history
+    else:
+        # Add user message to chat history
+        st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
+        # Display user message in chat message container
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(prompt, unsafe_allow_html=True)
+
+        # Simulate bot thinking with a "generating response..." indicator and spinner
+        with st.chat_message("assistant", avatar="🤖"):
+            message_placeholder = st.empty()
+            full_response = ""
+            generating_response_text = "Generating response..."
+            # Display spinner and "Generating response..." text
+            with st.spinner(generating_response_text):
+
+                # Extract dynamic placeholders
+                dynamic_placeholders = extract_dynamic_placeholders(prompt)
+
+                # Tokenize input
+                inputs = tokenizer(prompt, padding=True, truncation=True, return_tensors="pt")
                 inputs = {key: value.to(device) for key, value in inputs.items()}
 
-                # 3. Make prediction
+                # Make prediction
                 with torch.no_grad():
                     outputs = model(**inputs)
                     logits = outputs.logits
@@ -395,42 +374,44 @@ def process_message(input_text):
                 predicted_category_index = prediction.item()
                 predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")
 
-                # 4. Get and format response
-                initial_response = responses.get(predicted_category_name, responses["Unknown Category"])
-                final_response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
+                # Get and format response
+                initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand your request. Please try again.")
+                response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
 
-                # 5. Simulate typing effect (optional)
-                full_response_display = ""
-                for chunk in final_response.split():
-                    full_response_display += chunk + " "
-                    message_placeholder.markdown(full_response_display + "▌", unsafe_allow_html=True)
-                    time.sleep(0.03) # Adjust speed as needed
-                message_placeholder.markdown(final_response, unsafe_allow_html=True) # Display final response without cursor
+                full_response = response # Assign the final response
 
+            message_placeholder.empty() # Clear spinner and "Generating response..." text
+            message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
 
-            except Exception as e:
-                st.error(f"An error occurred: {str(e)}")
-                final_response = "Sorry, I encountered an error while processing your request. Please try again."
-                message_placeholder.markdown(final_response, unsafe_allow_html=True)
+        # Add assistant message to chat history
+        st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
 
 
-        # Add final assistant response to chat history
-        st.session_state.chat_history.append({"role": "assistant", "content": final_response})
-
-# --- Handle Dropdown Button Click ---
-if process_query_button and selected_query:
-    process_message(selected_query)
-    # Optional: Reset selectbox after processing maybe? Or keep it selected?
-    # st.session_state.query_selectbox = "" # Uncomment to reset selectbox
-
-# --- Handle Chat Input ---
-if prompt := st.chat_input("Enter your question here..."):
-    process_message(prompt)
-
-
-# --- Reset Button ---
-if st.session_state.chat_history: # Only show reset button if there's history
-    st.markdown("---") # Separator
-    if st.button("Reset Chat", key="reset_button", type="primary"): # Make reset more prominent
+# Conditionally display reset button
+if st.session_state.chat_history: # Check if chat_history is not empty
+    st.markdown(
+        """
+        <style>
+        .stButton>button {
+            background: linear-gradient(90deg, #ff8a00, #e52e71); /* Original button gradient */
+            color: white !important;
+            border: none;
+            border-radius: 25px; /* Original button border-radius */
+            padding: 10px 20px;
+            font-size: 1.2em; /* Original button font-size */
+            font-weight: bold; /* Original button font-weight */
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease; /* Original button transition */
+        }
+        .stButton>button:hover {
+            transform: scale(1.05); /* Original button hover transform */
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Original button hover box-shadow */
+            color: white !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
-        st.rerun()
+        st.rerun() # Rerun the Streamlit app to clear the chat display immediately
