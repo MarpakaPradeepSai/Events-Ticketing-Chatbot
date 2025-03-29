@@ -181,14 +181,14 @@ def extract_dynamic_placeholders(user_question):
 
     return dynamic_placeholders
 
-# --- MOVED CSS HERE ---
+# --- MOVED and MODIFIED CSS HERE ---
 # Apply custom CSS for ALL buttons globally at the start
 st.markdown(
     """
     <style>
-    /* Global button style */
+    /* Default button style (for "Ask this question" button) */
     .stButton>button {
-        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Stylish gradient - orange to pink */
+        background: linear-gradient(90deg, #4a148c, #3f51b5); /* Blue-purple gradient */
         color: white !important;
         border: none;
         border-radius: 25px;
@@ -213,33 +213,16 @@ st.markdown(
         transform: scale(0.98);
     }
 
-    /* Specific style for "Ask this question" button */
-    div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] > button:nth-child(2) { /* Target the second button in horizontal block - adjust if needed */
-        background: linear-gradient(90deg, #00bcd4, #009688); /* Different gradient - cyan to teal */
-        color: white !important; /* Ensure text is white */
+    /* Specific style for "Reset Chat" button - Overrides default style */
+    div[data-testid="stHorizontalBlock"] > div:last-child > div > button { /* Target the last button in horizontal block */
+        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Original orange-pink gradient for Reset Chat */
     }
-    div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] > button:nth-child(2):hover {
-        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Shadow on hover */
-        color: white !important; /* Ensure text stays white on hover */
-    }
-
-
-    /* Specific style for "Reset Chat" button - for better distinction if needed - can be removed if default is enough*/
-    .stButton[data-testid="stButton"]:has(button#reset_button) > button {
-        background: linear-gradient(90deg, #dc143c, #8b0000); /* Red to dark red gradient */
-        color: white !important;
-    }
-    .stButton[data-testid="stButton"]:has(button#reset_button) > button:hover {
-        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
-        color: white !important;
-    }
-
 
     </style>
     """,
     unsafe_allow_html=True,
 )
-# --- END OF MOVED CSS ---
+# --- END OF MOVED and MODIFIED CSS ---
 
 
 # Streamlit UI
