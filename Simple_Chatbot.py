@@ -259,7 +259,7 @@ col1, col2 = st.columns([3, 1])  # Adjust column widths as needed
 with col1:
     selected_query = st.selectbox("Choose a query from examples:", [""] + example_queries, key="query_selectbox")
 with col2:
-    process_query_button = st.button("Ask", key="query_button")
+    process_query_button = st.button("Ask this question", key="query_button") # Changed button text
 
 # Initialize chat history in session state
 if "chat_history" not in st.session_state:
