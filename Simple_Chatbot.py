@@ -186,6 +186,7 @@ def extract_dynamic_placeholders(user_question):
 st.markdown(
     """
     <style>
+    /* General button style (for Reset Chat) */
     .stButton>button {
         background: linear-gradient(90deg, #ff8a00, #e52e71); /* Stylish gradient */
         color: white !important; /* Ensure text is white */
@@ -211,6 +212,16 @@ st.markdown(
     .stButton>button:active {
         transform: scale(0.98); /* Slightly smaller when clicked */
     }
+
+    /* Specific style for "Ask this question" button */
+    div.stButton>button.ask-button-style { /* Target button with class ask-button-style within stButton div */
+        background: linear-gradient(90deg, #00bcd4, #009688); /* Different gradient for Ask button */
+    }
+    div.stButton>button.ask-button-style:hover {
+        color: white !important; /* Ensure text stays white on hover for Ask button */
+    }
+
+
     /* Target the specific button container if needed, but general style is applied */
     /* div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] { ... } */
     </style>
@@ -247,7 +258,22 @@ selected_query = st.selectbox(
 )
 
 # Place the button directly below the selectbox
-process_query_button = st.button("Ask this question", key="query_button") # Shorter text might fit better
+# Use st.markdown to inject HTML button with the new CSS class
+process_query_button = st.markdown(
+    """
+    <div class="stButton">
+        <button class="ask-button-style" type="button">Ask this question</button>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+process_query_button_clicked = False # Flag to track button click
+
+# Check if the "Ask this question" button was clicked (using form submission workaround)
+with st.form(key='query_form'):
+    if st.form_submit_button("Ask this question"): # Hidden submit button to detect click
+        process_query_button_clicked = True
 
 
 # Initialize chat history in session state
@@ -261,7 +287,7 @@ for message in st.session_state.chat_history:
 
 
 # Process selected query from dropdown if button is clicked and query is selected
-if process_query_button and selected_query:
+if process_query_button_clicked and selected_query:
     prompt_from_dropdown = selected_query
     # Capitalize the first letter
     prompt_from_dropdown = prompt_from_dropdown[0].upper() + prompt_from_dropdown[1:] if prompt_from_dropdown else prompt_from_dropdown
@@ -359,4 +385,3 @@ if st.session_state.chat_history: # Check if chat_history is not empty
     if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
-
