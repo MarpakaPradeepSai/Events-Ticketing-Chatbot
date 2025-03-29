@@ -6,57 +6,94 @@ import os
 import requests
 import time  # For simulating processing time
 
-# Function to download files from GitHub (same as before)
+# --- Functions (download_from_github, load_spacy_model, load_model_and_tokenizer) remain the same ---
+
+# Function to download files from GitHub
 def download_from_github(repo_url, file_name, save_path):
-    file_url = f"{repo_url}/{file_name}"
+    # Construct the raw file URL
+    # Ensure the base URL ends correctly before appending file_name
+    if not repo_url.endswith('/'):
+        repo_url += '/'
+    # Check if 'raw/main' or similar path component is already in repo_url
+    if '/raw/' not in repo_url:
+         # Basic guess: append '/raw/main/' if it looks like a base repo URL
+         # This might need adjustment based on the actual repo structure
+         # A more robust approach might involve checking the repo structure or requiring a full base path
+         # For this specific repo structure, '/raw/main/' seems correct
+        repo_url += 'raw/main/' # Or adjust based on the actual branch/path
+
+    file_url = f"{repo_url}{file_name}"
+    # print(f"Attempting to download from: {file_url}") # Debug print
     response = requests.get(file_url)
     if response.status_code == 200:
         with open(save_path, 'wb') as f:
             f.write(response.content)
+        # print(f"Successfully downloaded {file_name}") # Debug print
     else:
-        raise Exception(f"Failed to download {file_name} from GitHub. Status code: {response.status_code}")
+        raise Exception(f"Failed to download {file_name} from {file_url}. Status code: {response.status_code}")
 
-# Path where you want to save the downloaded model files (same as before)
+# Path where you want to save the downloaded model files
 model_dir = "./albert_model"
 
-# Ensure model directory exists (same as before)
+# Ensure model directory exists
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
 
-# List of files to download from GitHub (same as before)
-repo_url = 'https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model'
+# List of files to download from GitHub
+# Use the base URL of the folder containing the files
+repo_url_base = 'https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/'
+# Specify the folder within the repo
+model_folder_path = 'ALBERT_Model'
+full_repo_url = os.path.join(repo_url_base, model_folder_path).replace("\\", "/") # Construct the full path
+
 files = ['config.json', 'model.safetensors', 'special_tokens_map.json', 'spiece.model', 'tokenizer_config.json']
 
-# Download all model files from GitHub (same as before)
+# Download all model files from GitHub
+all_files_exist = True
 for file in files:
-    # Add a check if file exists to avoid redownloading
     file_path = os.path.join(model_dir, file)
     if not os.path.exists(file_path):
+        all_files_exist = False
         print(f"Downloading {file}...")
         try:
-            download_from_github(repo_url, file, file_path)
+            # Pass the base URL and the specific file name relative to that base
+            download_from_github(full_repo_url, file, file_path)
         except Exception as e:
             st.error(f"Failed to download required model file: {file}. Error: {e}")
             st.stop()
     # else:
     #     print(f"{file} already exists.") # Optional: uncomment for debugging
 
-# Load the spaCy model for NER (same as before)
+if not all_files_exist:
+     print("All required model files downloaded.")
+
+
+# Load the spaCy model for NER
 @st.cache_resource
 def load_spacy_model():
-    # Use a more robust way to check/download spacy model if needed
+    model_name = "en_core_web_trf"
     try:
-        nlp = spacy.load("en_core_web_trf")
+        # Try loading to see if it exists
+        spacy.load(model_name)
     except OSError:
-        st.warning("SpaCy model 'en_core_web_trf' not found. Downloading...")
-        spacy.cli.download("en_core_web_trf")
-        nlp = spacy.load("en_core_web_trf")
-    return nlp
+        st.warning(f"SpaCy model '{model_name}' not found. Downloading...")
+        try:
+            spacy.cli.download(model_name)
+            # Verify download
+            spacy.load(model_name)
+            st.success(f"SpaCy model '{model_name}' downloaded successfully.")
+        except Exception as e:
+            st.error(f"Failed to download SpaCy model '{model_name}'. Error: {e}")
+            st.error("Please try installing it manually: python -m spacy download en_core_web_trf")
+            st.stop()
+    # Load the model after ensuring it exists
+    return spacy.load(model_name)
 
-# Initialize the spaCy model (same as before)
+
+# Initialize the spaCy model
 nlp = load_spacy_model()
 
-# Load the fine-tuned model and tokenizer from the local directory (same as before)
+# Load the fine-tuned model and tokenizer from the local directory
 @st.cache_resource
 def load_model_and_tokenizer():
     try:
@@ -66,20 +103,21 @@ def load_model_and_tokenizer():
         return model, tokenizer
     except Exception as e:
         st.error(f"Error loading model or tokenizer from {model_dir}: {str(e)}")
+        st.error("Please ensure all model files (config.json, model.safetensors, etc.) are present in the './albert_model' directory.")
         return None, None
 
 model, tokenizer = load_model_and_tokenizer()
 
-# Check if the model and tokenizer loaded successfully (same as before)
+# Check if the model and tokenizer loaded successfully
 if model is None or tokenizer is None:
-    st.error("Model or Tokenizer failed to load. Please check the console for errors and ensure model files are downloaded correctly.")
-    st.stop()  # Halt execution if model loading fails
+    st.error("Model or Tokenizer failed to load. Halting execution.")
+    st.stop()
 
-# Set device to CPU (same as before)
+# Set device to CPU
 device = torch.device("cpu")
 model.to(device)
 
-# Category labels mapping (same as before)
+# --- Category labels, Response templates, Static placeholders remain the same ---
 category_labels = {
     0: "buy_ticket", 1: "cancel_ticket", 2: "change_personal_details_on_ticket", 3: "check_cancellation_fee", 4: "check_cancellation_policy",
     5: "check_privacy_policy", 6: "check_refund_policy", 7: "customer_service", 8: "delivery_options", 9: "delivery_period",
@@ -87,8 +125,6 @@ category_labels = {
     16: "information_about_type_events", 17: "pay", 18: "payment_methods", 19: "report_payment_issue", 20: "sell_ticket", 21: "track_cancellation",
     22: "track_refund", 23: "transfer_ticket", 24: "upgrade_ticket"
 }
-
-# Response templates (same as before)
 responses = {
     'cancel_ticket': 'To cancel your ticket for the {{EVENT}} in {{CITY}}, please follow these steps:\n\n1. Access {{WEBSITE_URL}} and sign in to your account.\n2. Go to the {{CANCEL_TICKET_SECTION}} section.\n3. Locate your upcoming events and click on the {{EVENT}} in {{CITY}}.\n4. Select the {{CANCEL_TICKET_OPTION}} option.\n5. Complete the prompts to finalize your cancellation.\n\nIf any issues arise, do not hesitate to reach out to our customer support for further help.',
     'buy_ticket': "To acquire a ticket for the {{EVENT}} in {{CITY}}, please undertake the following steps:\n\n1. Access {{WEBSITE_URL}} or launch the {{APP}}.\n2. Proceed to the {{TICKET_SECTION}} segment.\n3. Input the specifics of the desired event or performance.\n4. Identify and select the event from the listed search results.\n5. Specify the quantity of tickets and choose preferred seating arrangements (if applicable).\n6. Move to the checkout phase and provide the required payment details.\n\nUpon completion of your purchase, you will receive an email confirmation containing your ticket information.",
@@ -116,8 +152,6 @@ responses = {
     'transfer_ticket': "To send your ticket for an {{EVENT}} in {{CITY}}, please adhere to these instructions:\n\n1. Access your account on {{WEBSITE_URL}}.\n2. Proceed to the {{TICKET_SECTION}} section found in your profile.\n3. Locate the specific ticket you wish to send from your listed purchases.\n4. Select the {{TRANSFER_TICKET_OPTION}} option available there.\n5. Input the recipient's email and provide any necessary details.\n6. Validate the transfer and await a confirmation email.\n\nIf you face any difficulties, refer to the help section or reach out to customer support.	",
     'upgrade_ticket': "To upgrade your ticket for the upcoming event, please follow these instructions:\n\n1. Go to the {{WEBSITE_URL}}.\n2. Sign in with your username and password.\n3. Proceed to the {{TICKET_SECTION}} area.\n4. Find your current ticket purchase listed under {{UPGRADE_TICKET_INFORMATION}} and select the {{UPGRADE_TICKET_OPTION}} button.\n5. Adhere to the on-screen directions to select your intended upgrade and verify the modifications.\n\nIf you face any difficulties throughout this process, reach out to our support team for additional help.	"
 }
-
-# Define static placeholders (same as before)
 static_placeholders = {
     "{{WEBSITE_URL}}": "www.events-ticketing.com", "{{SUPPORT_TEAM_LINK}}": "www.support-team.com", "{{CONTACT_SUPPORT_LINK}}" : "www.support-team.com",
     "{{SUPPORT_CONTACT_LINK}}" : "www.support-team.com", "{{CANCEL_TICKET_SECTION}}": "<b>Cancel Ticket</b>", "{{CANCEL_TICKET_OPTION}}": "<b>Cancel Ticket</b>",
@@ -146,34 +180,57 @@ static_placeholders = {
     "{{ASSISTANCE_SECTION}}" : "<b>Assistance Section</b>"
 }
 
-# Function to replace placeholders (same as before)
+
+# Function to replace placeholders
 def replace_placeholders(response, dynamic_placeholders, static_placeholders):
     for placeholder, value in static_placeholders.items():
         response = response.replace(placeholder, value)
     for placeholder, value in dynamic_placeholders.items():
         response = response.replace(placeholder, value)
-    # Add a fallback for any missed placeholders
+    # Fallback for missed dynamic placeholders
     response = response.replace("{{EVENT}}", "the event")
     response = response.replace("{{CITY}}", "the city")
     return response
 
-# Function to extract dynamic placeholders using SpaCy (same as before)
+# Function to extract dynamic placeholders using SpaCy
 def extract_dynamic_placeholders(user_question):
     doc = nlp(user_question)
     dynamic_placeholders = {}
     event_found = False
     city_found = False
+
+    # Prioritize EVENT and GPE labels first
     for ent in doc.ents:
-        if ent.label_ == "EVENT" and not event_found: # Assuming 'EVENT' label
+        if ent.label_ == "EVENT" and not event_found:
             event_text = ent.text.title()
             dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"
             event_found = True
-        elif ent.label_ == "GPE" and not city_found: # GPE for cities
+        elif ent.label_ == "GPE" and not city_found: # GPE for cities, countries, states
             city_text = ent.text.title()
             dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"
             city_found = True
+        if event_found and city_found: # Stop early if both are found
+            break
 
-    # Use defaults only if specific entities weren't found
+    # Fallback: Look for general nouns (NN, NNP, NNS, NNPS) or proper nouns (PROPN) if specific labels fail
+    # This is less precise and might pick up incorrect words
+    if not event_found or not city_found:
+        for token in doc:
+             # Check if it's a proper noun or noun, likely capitalized, and not already found
+            if not event_found and token.pos_ in ["PROPN", "NOUN"] and token.is_title and token.text.lower() != "ticket" and token.text.lower() != "event":
+                # Basic heuristic: assume first suitable title-cased noun/proper noun is the event
+                event_text = token.text.title()
+                dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"
+                event_found = True
+            elif not city_found and token.pos_ == "PROPN" and token.is_title and '{{EVENT}}' not in dynamic_placeholders or dynamic_placeholders.get('{{EVENT}}') != f"<b>{token.text.title()}</b>":
+                 # Basic heuristic: assume next suitable title-cased proper noun is the city
+                city_text = token.text.title()
+                dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"
+                city_found = True
+            if event_found and city_found:
+                break # Stop if both found through fallback
+
+    # Use defaults only if specific entities weren't found even after fallback
     if not event_found:
         dynamic_placeholders['{{EVENT}}'] = "the event" # More neutral default
     if not city_found:
@@ -181,49 +238,65 @@ def extract_dynamic_placeholders(user_question):
 
     return dynamic_placeholders
 
+
 # --- MOVED CSS HERE ---
-# Apply custom CSS for ALL buttons globally at the start
+# Apply custom CSS
 st.markdown(
     """
     <style>
-    /* General button style (for Reset Chat) */
+    /* Default Button Style (Applied to Reset Chat and potentially others) */
     .stButton>button {
-        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Stylish gradient */
-        color: white !important; /* Ensure text is white */
+        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Original gradient */
+        color: white !important;
         border: none;
-        border-radius: 25px; /* Rounded corners */
-        padding: 10px 20px; /* Padding */
-        font-size: 1.2em; /* Font size */
-        font-weight: bold; /* Bold text */
+        border-radius: 25px;
+        padding: 10px 20px;
+        font-size: 1em; /* Adjusted size slightly for better fit */
+        font-weight: bold;
         cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease; /* Smooth transitions */
-        display: inline-flex; /* Helps with alignment */
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        margin-top: 5px; /* Adjust slightly if needed for alignment with selectbox */
-        width: auto; /* Fit content width */
-        min-width: 150px; /* Optional: ensure a minimum width */
+        margin-top: 5px;
+        width: auto;
+        min-width: 120px; /* Adjusted min-width */
     }
     .stButton>button:hover {
-        transform: scale(1.05); /* Slightly larger on hover */
-        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Shadow on hover */
-        color: white !important; /* Ensure text stays white on hover */
+        transform: scale(1.05);
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
+        color: white !important;
     }
     .stButton>button:active {
-        transform: scale(0.98); /* Slightly smaller when clicked */
+        transform: scale(0.98);
     }
 
-    /* Specific style for "Ask this question" button */
-    div.stButton>button.ask-button-style { /* Target button with class ask-button-style within stButton div */
-        background: linear-gradient(90deg, #00bcd4, #009688); /* Different gradient for Ask button */
+    /* Specific Style for the 'Ask this question' button */
+    /* Target the button inside the specific wrapper div */
+    .ask-query-button-wrapper .stButton>button {
+        background: linear-gradient(90deg, #007bff, #0056b3); /* Blue gradient */
+        color: white !important; /* Ensure text is white */
+        font-size: 1.1em; /* Slightly larger font if desired */
+        min-width: 150px; /* Specific min-width */
+        /* Other properties like border-radius, padding, transitions are inherited
+           or can be overridden here if needed */
     }
-    div.stButton>button.ask-button-style:hover {
-        color: white !important; /* Ensure text stays white on hover for Ask button */
+    .ask-query-button-wrapper .stButton>button:hover {
+        background: linear-gradient(90deg, #0056b3, #003d80); /* Darker blue on hover */
+        transform: scale(1.05); /* Keep hover effect */
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Keep shadow effect */
+        color: white !important; /* Ensure text stays white */
+    }
+    .ask-query-button-wrapper .stButton>button:active {
+         background: linear-gradient(90deg, #004085, #00274e); /* Even darker blue when active */
+         transform: scale(0.98); /* Keep active effect */
     }
 
+    /* Ensure selectbox and button align nicely if needed */
+    /* div[data-testid="stHorizontalBlock"] {
+        align-items: stretch; /* or center, flex-end */
+    /* } */
 
-    /* Target the specific button container if needed, but general style is applied */
-    /* div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] { ... } */
     </style>
     """,
     unsafe_allow_html=True,
@@ -249,31 +322,25 @@ example_queries = [
     "How to track my refund?",
 ]
 
-# Dropdown and Button section (always displayed at the top)
-selected_query = st.selectbox(
-    "Choose a query from examples:",
-    [""] + example_queries,
-    key="query_selectbox",
-    label_visibility="collapsed" # Hide label if title is clear enough
-)
+# --- Dropdown and Button section ---
+# Use columns for potentially better alignment, although direct placement often works
+col1, col2 = st.columns([3, 1]) # Adjust ratio as needed
 
-# Place the button directly below the selectbox
-# Use st.markdown to inject HTML button with the new CSS class
-process_query_button = st.markdown(
-    """
-    <div class="stButton">
-        <button class="ask-button-style" type="button">Ask this question</button>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+with col1:
+    selected_query = st.selectbox(
+        "Choose a query from examples:",
+        [""] + example_queries,
+        index=0, # Default to empty selection
+        key="query_selectbox",
+        label_visibility="collapsed"
+    )
 
-process_query_button_clicked = False # Flag to track button click
-
-# Check if the "Ask this question" button was clicked (using form submission workaround)
-with st.form(key='query_form'):
-    if st.form_submit_button("Ask this question"): # Hidden submit button to detect click
-        process_query_button_clicked = True
+with col2:
+    # Wrap the button in the specific div class for CSS targeting
+    st.markdown('<div class="ask-query-button-wrapper">', unsafe_allow_html=True)
+    process_query_button = st.button("Ask query", key="query_button") # Shorter text fits better
+    st.markdown('</div>', unsafe_allow_html=True)
+# --- End of Dropdown and Button section ---
 
 
 # Initialize chat history in session state
@@ -286,102 +353,82 @@ for message in st.session_state.chat_history:
         st.markdown(message["content"], unsafe_allow_html=True)
 
 
-# Process selected query from dropdown if button is clicked and query is selected
-if process_query_button_clicked and selected_query:
-    prompt_from_dropdown = selected_query
+# Function to process a query and update chat
+def process_and_respond(user_query):
+    if not user_query or not user_query.strip():
+        st.toast("⚠️ Please enter or select a valid question.", icon="⚠️")
+        return # Don't process empty queries
+
     # Capitalize the first letter
-    prompt_from_dropdown = prompt_from_dropdown[0].upper() + prompt_from_dropdown[1:] if prompt_from_dropdown else prompt_from_dropdown
+    user_query = user_query[0].upper() + user_query[1:] if user_query else user_query
 
-    # Add user message to chat history
-    st.session_state.chat_history.append({"role": "user", "content": prompt_from_dropdown, "avatar": "👤"})
-    # Display user message in chat message container
+    # Add user message to chat history and display
+    st.session_state.chat_history.append({"role": "user", "content": user_query, "avatar": "👤"})
     with st.chat_message("user", avatar="👤"):
-        st.markdown(prompt_from_dropdown, unsafe_allow_html=True)
+        st.markdown(user_query, unsafe_allow_html=True)
 
-    # Simulate bot thinking
+    # Simulate bot thinking and generate response
     with st.chat_message("assistant", avatar="🤖"):
         message_placeholder = st.empty()
         generating_response_text = "Generating response..."
         with st.spinner(generating_response_text):
-            # Extract dynamic placeholders
-            dynamic_placeholders = extract_dynamic_placeholders(prompt_from_dropdown)
-            # Tokenize input
-            inputs = tokenizer(prompt_from_dropdown, padding=True, truncation=True, return_tensors="pt").to(device)
-            # Make prediction
-            with torch.no_grad():
-                outputs = model(**inputs)
-                logits = outputs.logits
-            prediction = torch.argmax(logits, dim=-1).item()
-            predicted_category_name = category_labels.get(prediction, "Unknown Category")
-            # Get and format response
-            initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand. Could you rephrase?")
-            full_response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
-            # Simulate processing time (optional)
-            # time.sleep(1)
-
-        message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
-
-    # Add assistant message to chat history
-    st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
-    # Clear the selectbox after processing (optional)
-    # st.session_state.query_selectbox = "" # This might cause issues if user wants to resubmit
-    # st.experimental_rerun() # Might be too disruptive
-
-
-# Input box at the bottom (always displayed)
-if prompt := st.chat_input("Enter your question:"):
-    # Capitalize the first letter
-    prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
-
-    if not prompt.strip():
-        # Handle empty input gracefully without adding it as a user message? Or show error?
-        # Option 1: Do nothing (might be confusing)
-        # Option 2: Show a temporary error message
-        st.toast("⚠️ Please enter a question.", icon="⚠️")
-        # Or add error to chat (as before)
-        # st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
-        # with st.chat_message("user", avatar="👤"): st.markdown(prompt, unsafe_allow_html=True)
-        # error_msg = "Please enter a valid question. You cannot send empty messages."
-        # with st.chat_message("assistant", avatar="🤖"): st.error(error_msg)
-        # st.session_state.chat_history.append({"role": "assistant", "content": error_msg, "avatar": "🤖"})
-    else:
-        # Add user message to chat history
-        st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
-        # Display user message
-        with st.chat_message("user", avatar="👤"):
-            st.markdown(prompt, unsafe_allow_html=True)
-
-        # Simulate bot thinking
-        with st.chat_message("assistant", avatar="🤖"):
-            message_placeholder = st.empty()
-            generating_response_text = "Generating response..."
-            with st.spinner(generating_response_text):
+            try:
                 # Extract dynamic placeholders
-                dynamic_placeholders = extract_dynamic_placeholders(prompt)
+                dynamic_placeholders = extract_dynamic_placeholders(user_query)
                 # Tokenize input
-                inputs = tokenizer(prompt, padding=True, truncation=True, return_tensors="pt").to(device)
+                inputs = tokenizer(user_query, padding=True, truncation=True, return_tensors="pt").to(device)
                 # Make prediction
                 with torch.no_grad():
                     outputs = model(**inputs)
                     logits = outputs.logits
                 prediction = torch.argmax(logits, dim=-1).item()
-                predicted_category_name = category_labels.get(prediction, "Unknown Category")
+                predicted_category_name = category_labels.get(prediction, "unknown_category") # Use placeholder for unknown
+
                 # Get and format response
-                initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand. Could you rephrase?")
-                full_response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
+                if predicted_category_name == "unknown_category":
+                     full_response = "Sorry, I couldn't understand that specific request. Could you please rephrase or try asking in a different way? You can also select a common query from the dropdown above."
+                else:
+                    initial_response = responses.get(predicted_category_name, "Sorry, I have information for that category but no specific template. Please contact support.") # Fallback for missing template
+                    full_response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
+
                 # Simulate processing time (optional)
                 # time.sleep(1)
 
-            message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+                message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+                # Add assistant message to chat history
+                st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
 
-        # Add assistant message to chat history
-        st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+            except Exception as e:
+                st.error(f"An error occurred while processing your request: {e}")
+                error_response = "Sorry, I encountered an technical issue. Please try again later."
+                message_placeholder.markdown(error_response, unsafe_allow_html=True)
+                st.session_state.chat_history.append({"role": "assistant", "content": error_response, "avatar": "🤖"})
+
+# Process selected query from dropdown if button is clicked and query is selected
+if process_query_button and selected_query:
+    process_and_respond(selected_query)
+    # Optionally reset selectbox after processing - can be disruptive if user wants to resubmit
+    # st.session_state.query_selectbox = ""
+    # st.rerun() # Rerun might clear spinner too quickly
 
 
-# Conditionally display reset button (using the globally defined style)
+# Input box at the bottom (always displayed)
+if prompt := st.chat_input("Enter your question:"):
+    process_and_respond(prompt)
+
+
+# Conditionally display reset button (uses the default button style defined in CSS)
 if st.session_state.chat_history: # Check if chat_history is not empty
-    # Place the reset button in the sidebar or at the bottom
-    # st.sidebar.button("Reset Chat", key="reset_button_sidebar", on_click=lambda: st.session_state.update(chat_history=[])) # Example for sidebar
-    if st.button("Reset Chat", key="reset_button"):
-        st.session_state.chat_history = []
-        st.rerun() # Rerun the Streamlit app to clear the chat display immediately
+    # Place the reset button - using st.container to control placement better if needed
+    reset_container = st.container()
+    with reset_container:
+        # Center the button using columns hack or markdown
+        # col1_reset, col2_reset, col3_reset = st.columns([1,1,1])
+        # with col2_reset:
+        #     if st.button("Reset Chat", key="reset_button", use_container_width=True):
+        #         st.session_state.chat_history = []
+        #         st.rerun()
+        # OR simpler placement:
+        if st.button("Reset Chat", key="reset_button"):
+             st.session_state.chat_history = []
+             st.rerun() # Rerun the Streamlit app to clear the chat display immediately
