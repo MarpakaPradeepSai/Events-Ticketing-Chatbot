@@ -240,6 +240,23 @@ def extract_dynamic_placeholders(user_question):
 st.title("Simple Events Ticketing Chatbot")
 st.write("Ask me anything about ticketing for your events!")
 
+# Define example queries for the dropdown
+example_queries = [
+    "How do I buy a ticket?",
+    "What is the cancellation policy?",
+    "I want to get a refund for my ticket.",
+    "How can I change my ticket details?",
+    "Tell me about upcoming events in London.",
+    "How to contact customer service?",
+    "What payment methods are accepted?",
+    "I need to report a payment issue.",
+    "Can I sell my ticket?",
+    "How to track my refund?",
+]
+
+# Dropdown box for example queries
+selected_query = st.selectbox("Choose a query from examples:", [""] + example_queries) # Added an empty string as default option
+
 # Initialize chat history in session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
@@ -303,6 +320,56 @@ if prompt := st.chat_input("Enter your question:"): # Renamed user_question to p
 
         # Add assistant message to chat history
         st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+
+# Process selected query from dropdown if a query is selected
+if selected_query:
+    if selected_query not in st.session_state.chat_history[-1:] if st.session_state.chat_history else True: # prevent duplicate if same query is selected consecutively
+        prompt_from_dropdown = selected_query
+        # Capitalize the first letter of the user input
+        prompt_from_dropdown = prompt_from_dropdown[0].upper() + prompt_from_dropdown[1:] if prompt_from_dropdown else prompt_from_dropdown
+
+        # Add user message to chat history
+        st.session_state.chat_history.append({"role": "user", "content": prompt_from_dropdown, "avatar": "👤"})
+        # Display user message in chat message container
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(prompt_from_dropdown, unsafe_allow_html=True)
+
+        # Simulate bot thinking with a "generating response..." indicator and spinner
+        with st.chat_message("assistant", avatar="🤖"):
+            message_placeholder = st.empty()
+            full_response = ""
+            generating_response_text = "Generating response..."
+            # Display spinner and "Generating response..." text
+            with st.spinner(generating_response_text):
+
+                # Extract dynamic placeholders
+                dynamic_placeholders = extract_dynamic_placeholders(prompt_from_dropdown)
+
+                # Tokenize input
+                inputs = tokenizer(prompt_from_dropdown, padding=True, truncation=True, return_tensors="pt")
+                inputs = {key: value.to(device) for key, value in inputs.items()}
+
+                # Make prediction
+                with torch.no_grad():
+                    outputs = model(**inputs)
+                    logits = outputs.logits
+                prediction = torch.argmax(logits, dim=-1)
+                predicted_category_index = prediction.item()
+                predicted_category_name = category_labels.get(predicted_category_index, "Unknown Category")
+
+                # Get and format response
+                initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand your request. Please try again.")
+                response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
+
+                full_response = response # Assign the final response
+
+            message_placeholder.empty() # Clear spinner and "Generating response..." text
+            message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+
+        # Add assistant message to chat history
+        st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+        st.selectbox("Choose a query from examples:", [""] + example_queries, key="dropdown_reset") # Reset dropdown after processing selected query
+
 
 # Conditionally display reset button
 if st.session_state.chat_history: # Check if chat_history is not empty
