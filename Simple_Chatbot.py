@@ -187,6 +187,8 @@ st.markdown(
     """
     <style>
     .stButton>button {
+        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Stylish gradient */
+        color: white !important; /* Ensure text is white */
         border: none;
         border-radius: 25px; /* Rounded corners */
         padding: 10px 20px; /* Padding */
@@ -209,25 +211,8 @@ st.markdown(
     .stButton>button:active {
         transform: scale(0.98); /* Slightly smaller when clicked */
     }
-
-    /* Style for "Ask this question" button */
-    .stButton>button.ask-button {
-        background: linear-gradient(90deg, #4CAF50, #2E7D32); /* Green gradient */
-        color: white !important;
-    }
-    .stButton>button.ask-button:hover {
-        background: linear-gradient(90deg, #66BB6A, #388E3C); /* Lighter green on hover */
-    }
-
-    /* Style for "Reset Chat" button */
-    .stButton>button.reset-button {
-        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Original orange/pink gradient */
-        color: white !important;
-    }
-    .stButton>button.reset-button:hover {
-        background: linear-gradient(90deg, #FFAB40, #F4511E); /* Lighter orange/pink on hover */
-    }
-
+    /* Target the specific button container if needed, but general style is applied */
+    /* div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] { ... } */
     </style>
     """,
     unsafe_allow_html=True,
@@ -261,8 +246,8 @@ selected_query = st.selectbox(
     label_visibility="collapsed" # Hide label if title is clear enough
 )
 
-# Place the button directly below the selectbox, apply custom class 'ask-button'
-process_query_button = st.button("Ask this question", key="query_button",  kwargs={"classes": "ask-button"})
+# Place the button directly below the selectbox
+process_query_button = st.button("Ask this question", key="query_button") # Shorter text might fit better
 
 
 # Initialize chat history in session state
@@ -371,6 +356,7 @@ if prompt := st.chat_input("Enter your question:"):
 if st.session_state.chat_history: # Check if chat_history is not empty
     # Place the reset button in the sidebar or at the bottom
     # st.sidebar.button("Reset Chat", key="reset_button_sidebar", on_click=lambda: st.session_state.update(chat_history=[])) # Example for sidebar
-    if st.button("Reset Chat", key="reset_button", kwargs={"classes": "reset-button"}):
+    if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
+
