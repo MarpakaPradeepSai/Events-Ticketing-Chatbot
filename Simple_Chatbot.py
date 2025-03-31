@@ -275,9 +275,7 @@ if "last_response_displayed" not in st.session_state:
     st.session_state.last_response_displayed = False
 
 # Display chat messages from history on app rerun
-for i, message in enumerate(st.session_state.chat_history):
-    if i > 0:  # Add divider before each message except the first one
-        st.divider()
+for message in st.session_state.chat_history:
     with st.chat_message(message["role"], avatar=message["avatar"]):
         st.markdown(message["content"], unsafe_allow_html=True)
 
@@ -287,7 +285,8 @@ st.session_state.last_response_displayed = False
 
 # Process selected query from dropdown if button is clicked and query is selected
 if process_query_button and selected_query and selected_query != "Choose your option": # Added condition to check if it's not the placeholder
-    # No need for divider here anymore
+    if st.session_state.chat_history: # Check if there's chat history (meaning it's not the very first query)
+        st.divider() # Display divider before new query
 
     prompt_from_dropdown = selected_query
     # Capitalize the first letter
@@ -332,7 +331,8 @@ if process_query_button and selected_query and selected_query != "Choose your op
 
 # Input box at the bottom (always displayed)
 if prompt := st.chat_input("Enter your own question:"):
-    # No need for divider here anymore
+    if st.session_state.chat_history: # Check if there's chat history (meaning it's not the very first query)
+        st.divider() # Display divider before new query
 
     # Capitalize the first letter
     prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
@@ -392,3 +392,5 @@ if st.session_state.chat_history: # Check if chat_history is not empty
         st.session_state.chat_history = []
         st.session_state.last_response_displayed = False # Reset the flag as well
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
+
+
