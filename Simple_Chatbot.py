@@ -373,5 +373,3 @@ if st.session_state.chat_history: # Check if chat_history is not empty
     if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
-
-
