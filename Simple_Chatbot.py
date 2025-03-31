@@ -6,6 +6,61 @@ import os
 import requests
 import time  # For simulating processing time
 
+# --- CSS for Times New Roman Font and Buttons ---
+st.markdown(
+    """
+    <style>
+    /* Apply Times New Roman font to the entire body */
+    body {
+        font-family: 'Times New Roman', serif !important;
+    }
+    .stButton>button {
+        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Stylish gradient */
+        color: white !important; /* Ensure text is white */
+        border: none;
+        border-radius: 25px; /* Rounded corners */
+        padding: 10px 20px; /* Padding */
+        font-size: 1.2em; /* Font size */
+        font-weight: bold; /* Bold text */
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease; /* Smooth transitions */
+        display: inline-flex; /* Helps with alignment */
+        align-items: center;
+        justify-content: center;
+        margin-top: 5px; /* Adjust slightly if needed for alignment with selectbox */
+        width: auto; /* Fit content width */
+        min-width: 150px; /* Optional: ensure a minimum width */
+    }
+    .stButton>button:hover {
+        transform: scale(1.05); /* Slightly larger on hover */
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Shadow on hover */
+        color: white !important; /* Ensure text stays white on hover */
+    }
+    .stButton>button:active {
+        transform: scale(0.98); /* Slightly smaller when clicked */
+    }
+    /* Target the specific button container if needed, but general style is applied */
+    /* div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] { ... } */
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Custom CSS for the "Ask this question" button (optional - keeping it as is)
+st.markdown(
+    """
+    <style>
+    div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button:nth-of-type(1) {
+        background: linear-gradient(90deg, #29ABE2, #0077B6); /* Different gradient */
+        color: white !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+# --- END OF CSS ---
+
+
 # Function to download files from GitHub (same as before)
 def download_from_github(repo_url, file_name, save_path):
     file_url = f"{repo_url}/{file_name}"
@@ -180,58 +235,6 @@ def extract_dynamic_placeholders(user_question):
         dynamic_placeholders['{{CITY}}'] = "the city" # More neutral default
 
     return dynamic_placeholders
-
-# --- MOVED CSS HERE ---
-# Apply custom CSS for ALL buttons globally at the start
-st.markdown(
-    """
-    <style>
-    .stButton>button {
-        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Stylish gradient */
-        color: white !important; /* Ensure text is white */
-        border: none;
-        border-radius: 25px; /* Rounded corners */
-        padding: 10px 20px; /* Padding */
-        font-size: 1.2em; /* Font size */
-        font-weight: bold; /* Bold text */
-        cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease; /* Smooth transitions */
-        display: inline-flex; /* Helps with alignment */
-        align-items: center;
-        justify-content: center;
-        margin-top: 5px; /* Adjust slightly if needed for alignment with selectbox */
-        width: auto; /* Fit content width */
-        min-width: 150px; /* Optional: ensure a minimum width */
-    }
-    .stButton>button:hover {
-        transform: scale(1.05); /* Slightly larger on hover */
-        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Shadow on hover */
-        color: white !important; /* Ensure text stays white on hover */
-    }
-    .stButton>button:active {
-        transform: scale(0.98); /* Slightly smaller when clicked */
-    }
-    /* Target the specific button container if needed, but general style is applied */
-    /* div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] { ... } */
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# Custom CSS for the "Ask this question" button
-st.markdown(
-    """
-    <style>
-    div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button:nth-of-type(1) {
-        background: linear-gradient(90deg, #29ABE2, #0077B6); /* Different gradient */
-        color: white !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# --- END OF MOVED CSS ---
 
 
 # Streamlit UI
