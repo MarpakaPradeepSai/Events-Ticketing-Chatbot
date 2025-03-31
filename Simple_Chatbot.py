@@ -251,7 +251,7 @@ st.markdown(
     justify-content: center;
     margin-top: 5px; /* Adjust slightly if needed for alignment with selectbox */
     width: auto; /* Fit content width */
-    min-width: 150px; /* Optional: ensure a minimum width */
+    min-width: 100px; /* Optional: ensure a minimum width */
     font-family: 'Times New Roman', Times, serif !important; /* Times New Roman for buttons */
 }
 .stButton>button:hover {
