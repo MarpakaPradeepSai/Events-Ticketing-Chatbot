@@ -6,7 +6,7 @@ import os
 import requests
 import time  # For simulating processing time
 
-# --- Function to download files (no changes) ---
+# Function to download files from GitHub (same as before)
 def download_from_github(repo_url, file_name, save_path):
     file_url = f"{repo_url}/{file_name}"
     response = requests.get(file_url)
@@ -16,13 +16,20 @@ def download_from_github(repo_url, file_name, save_path):
     else:
         raise Exception(f"Failed to download {file_name} from GitHub. Status code: {response.status_code}")
 
-# --- Model directory and download logic (no changes) ---
+# Path where you want to save the downloaded model files (same as before)
 model_dir = "./albert_model"
+
+# Ensure model directory exists (same as before)
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
+
+# List of files to download from GitHub (same as before)
 repo_url = 'https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model'
 files = ['config.json', 'model.safetensors', 'special_tokens_map.json', 'spiece.model', 'tokenizer_config.json']
+
+# Download all model files from GitHub (same as before)
 for file in files:
+    # Add a check if file exists to avoid redownloading
     file_path = os.path.join(model_dir, file)
     if not os.path.exists(file_path):
         print(f"Downloading {file}...")
@@ -31,10 +38,13 @@ for file in files:
         except Exception as e:
             st.error(f"Failed to download required model file: {file}. Error: {e}")
             st.stop()
+    # else:
+    #     print(f"{file} already exists.") # Optional: uncomment for debugging
 
-# --- Load spaCy model (no changes) ---
+# Load the spaCy model for NER (same as before)
 @st.cache_resource
 def load_spacy_model():
+    # Use a more robust way to check/download spacy model if needed
     try:
         nlp = spacy.load("en_core_web_trf")
     except OSError:
@@ -42,29 +52,34 @@ def load_spacy_model():
         spacy.cli.download("en_core_web_trf")
         nlp = spacy.load("en_core_web_trf")
     return nlp
+
+# Initialize the spaCy model (same as before)
 nlp = load_spacy_model()
 
-# --- Load fine-tuned model and tokenizer (no changes) ---
+# Load the fine-tuned model and tokenizer from the local directory (same as before)
 @st.cache_resource
 def load_model_and_tokenizer():
     try:
         model = AutoModelForSequenceClassification.from_pretrained(model_dir)
         tokenizer = AutoTokenizer.from_pretrained(model_dir)
-        model.eval()
+        model.eval()  # Set to evaluation mode
         return model, tokenizer
     except Exception as e:
         st.error(f"Error loading model or tokenizer from {model_dir}: {str(e)}")
         return None, None
+
 model, tokenizer = load_model_and_tokenizer()
 
+# Check if the model and tokenizer loaded successfully (same as before)
 if model is None or tokenizer is None:
-    st.error("Model or Tokenizer failed to load.")
-    st.stop()
+    st.error("Model or Tokenizer failed to load. Please check the console for errors and ensure model files are downloaded correctly.")
+    st.stop()  # Halt execution if model loading fails
 
+# Set device to CPU (same as before)
 device = torch.device("cpu")
 model.to(device)
 
-# --- Category labels mapping (no changes) ---
+# Category labels mapping (same as before)
 category_labels = {
     0: "buy_ticket", 1: "cancel_ticket", 2: "change_personal_details_on_ticket", 3: "check_cancellation_fee", 4: "check_cancellation_policy",
     5: "check_privacy_policy", 6: "check_refund_policy", 7: "customer_service", 8: "delivery_options", 9: "delivery_period",
@@ -73,7 +88,7 @@ category_labels = {
     22: "track_refund", 23: "transfer_ticket", 24: "upgrade_ticket"
 }
 
-# --- Response templates (no changes) ---
+# Response templates (same as before)
 responses = {
     'cancel_ticket': 'To cancel your ticket for the {{EVENT}} in {{CITY}}, please follow these steps:\n\n1. Access {{WEBSITE_URL}} and sign in to your account.\n2. Go to the {{CANCEL_TICKET_SECTION}} section.\n3. Locate your upcoming events and click on the {{EVENT}} in {{CITY}}.\n4. Select the {{CANCEL_TICKET_OPTION}} option.\n5. Complete the prompts to finalize your cancellation.\n\nIf any issues arise, do not hesitate to reach out to our customer support for further help.',
     'buy_ticket': "To acquire a ticket for the {{EVENT}} in {{CITY}}, please undertake the following steps:\n\n1. Access {{WEBSITE_URL}} or launch the {{APP}}.\n2. Proceed to the {{TICKET_SECTION}} segment.\n3. Input the specifics of the desired event or performance.\n4. Identify and select the event from the listed search results.\n5. Specify the quantity of tickets and choose preferred seating arrangements (if applicable).\n6. Move to the checkout phase and provide the required payment details.\n\nUpon completion of your purchase, you will receive an email confirmation containing your ticket information.",
@@ -102,7 +117,7 @@ responses = {
     'upgrade_ticket': "To upgrade your ticket for the upcoming event, please follow these instructions:\n\n1. Go to {{WEBSITE_URL}}.\n2. Sign in with your username and password.\n3. Proceed to the {{TICKET_SECTION}} area.\n4. Find your current ticket purchase listed under {{UPGRADE_TICKET_INFORMATION}} and select the {{UPGRADE_TICKET_OPTION}} button.\n5. Adhere to the on-screen directions to select your intended upgrade and verify the modifications.\n\nIf you face any difficulties throughout this process, reach out to our support team for additional help."
 }
 
-# --- Static placeholders (no changes) ---
+# Define static placeholders (same as before)
 static_placeholders = {
     "{{WEBSITE_URL}}": "www.events-ticketing.com", "{{SUPPORT_TEAM_LINK}}": "www.support-team.com", "{{CONTACT_SUPPORT_LINK}}" : "www.support-team.com",
     "{{SUPPORT_CONTACT_LINK}}" : "www.support-team.com", "{{CANCEL_TICKET_SECTION}}": "<b>Cancel Ticket</b>", "{{CANCEL_TICKET_OPTION}}": "<b>Cancel Ticket</b>",
@@ -131,208 +146,230 @@ static_placeholders = {
     "{{ASSISTANCE_SECTION}}" : "<b>Assistance Section</b>"
 }
 
-# --- Function to replace placeholders (no changes) ---
+# Function to replace placeholders (same as before)
 def replace_placeholders(response, dynamic_placeholders, static_placeholders):
     for placeholder, value in static_placeholders.items():
         response = response.replace(placeholder, value)
     for placeholder, value in dynamic_placeholders.items():
         response = response.replace(placeholder, value)
+    # Add a fallback for any missed placeholders
     response = response.replace("{{EVENT}}", "the event")
     response = response.replace("{{CITY}}", "the city")
     return response
 
-# --- Function to extract dynamic placeholders (no changes) ---
+# Function to extract dynamic placeholders using SpaCy (same as before)
 def extract_dynamic_placeholders(user_question):
     doc = nlp(user_question)
     dynamic_placeholders = {}
     event_found = False
     city_found = False
     for ent in doc.ents:
-        if ent.label_ == "EVENT" and not event_found:
+        if ent.label_ == "EVENT" and not event_found: # Assuming 'EVENT' label
             event_text = ent.text.title()
             dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"
             event_found = True
-        elif ent.label_ == "GPE" and not city_found:
+        elif ent.label_ == "GPE" and not city_found: # GPE for cities
             city_text = ent.text.title()
             dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"
             city_found = True
+
+    # Use defaults only if specific entities weren't found
     if not event_found:
-        dynamic_placeholders['{{EVENT}}'] = "the event"
+        dynamic_placeholders['{{EVENT}}'] = "the event" # More neutral default
     if not city_found:
-        dynamic_placeholders['{{CITY}}'] = "the city"
+        dynamic_placeholders['{{CITY}}'] = "the city" # More neutral default
+
     return dynamic_placeholders
 
-# --- Global CSS (no changes) ---
+# --- MOVED CSS HERE ---
+# Apply custom CSS for ALL buttons globally at the start
 st.markdown(
     """
     <style>
-    /* General button style */
     .stButton>button {
-        background: linear-gradient(90deg, #ff8a00, #e52e71);
-        color: white !important;
+        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Stylish gradient */
+        color: white !important; /* Ensure text is white */
         border: none;
-        border-radius: 25px;
-        padding: 10px 20px;
-        font-size: 1.2em;
-        font-weight: bold;
+        border-radius: 25px; /* Rounded corners */
+        padding: 10px 20px; /* Padding */
+        font-size: 1.2em; /* Font size */
+        font-weight: bold; /* Bold text */
         cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        display: inline-flex;
+        transition: transform 0.2s ease, box-shadow 0.2s ease; /* Smooth transitions */
+        display: inline-flex; /* Helps with alignment */
         align-items: center;
         justify-content: center;
-        margin-top: 5px;
-        width: auto;
-        min-width: 150px;
+        margin-top: 5px; /* Adjust slightly if needed for alignment with selectbox */
+        width: auto; /* Fit content width */
+        min-width: 150px; /* Optional: ensure a minimum width */
     }
     .stButton>button:hover {
-        transform: scale(1.05);
-        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
-        color: white !important;
+        transform: scale(1.05); /* Slightly larger on hover */
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Shadow on hover */
+        color: white !important; /* Ensure text stays white on hover */
     }
     .stButton>button:active {
-        transform: scale(0.98);
+        transform: scale(0.98); /* Slightly smaller when clicked */
     }
-    /* Specific style for 'Ask this question' button */
-    div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button:nth-of-type(1) {
-        background: linear-gradient(90deg, #29ABE2, #0077B6);
-        color: white !important;
-    }
-
-    /* Style for the custom HTML scroll button (can be adjusted) */
-    #scrollToBottomBtn {
-        position: fixed; /* Keep it fixed relative to the viewport */
-        bottom: 70px;   /* Position above the chat input */
-        right: 20px;    /* Position on the right */
-        z-index: 1000;  /* Ensure it's above other elements */
-        background-color: #007bff; /* Blue background */
-        color: white;
-        border: none;
-        border-radius: 50%; /* Make it circular */
-        width: 50px;       /* Fixed width */
-        height: 50px;      /* Fixed height */
-        font-size: 24px;   /* Icon size */
-        cursor: pointer;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        transition: background-color 0.3s ease;
-        display: flex;     /* Center icon */
-        align-items: center; /* Center icon */
-        justify-content: center; /* Center icon */
-    }
-    #scrollToBottomBtn:hover {
-        background-color: #0056b3; /* Darker blue on hover */
-    }
-
+    /* Target the specific button container if needed, but general style is applied */
+    /* div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] { ... } */
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# --- Streamlit UI ---
+# Custom CSS for the "Ask this question" button
+st.markdown(
+    """
+    <style>
+    div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button:nth-of-type(1) {
+        background: linear-gradient(90deg, #29ABE2, #0077B6); /* Different gradient */
+        color: white !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# --- END OF MOVED CSS ---
+
+
+# Streamlit UI
 st.title("Simple Events Ticketing Chatbot")
 st.write("Ask me anything about ticketing for your events!")
 
-# Define example queries (no changes)
+# Define example queries for the dropdown
 example_queries = [
-    "How do I buy a ticket?", "What is the cancellation policy?", "I want to get a refund for my ticket.",
-    "How can I change my ticket details?", "Tell me about upcoming events in London.", "How to contact customer service?",
-    "What payment methods are accepted?", "I need to report a payment issue.", "Can I sell my ticket?", "How to track my refund?",
+    "How do I buy a ticket?",
+    "What is the cancellation policy?",
+    "I want to get a refund for my ticket.",
+    "How can I change my ticket details?",
+    "Tell me about upcoming events in London.",
+    "How to contact customer service?",
+    "What payment methods are accepted?",
+    "I need to report a payment issue.",
+    "Can I sell my ticket?",
+    "How to track my refund?",
 ]
 
-# Dropdown and Button section (no changes)
+# Dropdown and Button section (always displayed at the top)
 selected_query = st.selectbox(
-    "Choose a query from examples:", [""] + example_queries, key="query_selectbox", label_visibility="collapsed"
+    "Choose a query from examples:",
+    [""] + example_queries,
+    key="query_selectbox",
+    label_visibility="collapsed" # Hide label if title is clear enough
 )
-process_query_button = st.button("Ask this question", key="query_button")
 
-# Initialize chat history (no changes)
+# Place the button directly below the selectbox
+process_query_button = st.button("Ask this question", key="query_button") # Shorter text might fit better
+
+
+# Initialize chat history in session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Display chat messages (no changes)
+# Display chat messages from history on app rerun
 for message in st.session_state.chat_history:
     with st.chat_message(message["role"], avatar=message["avatar"]):
         st.markdown(message["content"], unsafe_allow_html=True)
 
-# --- Process selected query (no changes) ---
+
+# Process selected query from dropdown if button is clicked and query is selected
 if process_query_button and selected_query:
     prompt_from_dropdown = selected_query
+    # Capitalize the first letter
     prompt_from_dropdown = prompt_from_dropdown[0].upper() + prompt_from_dropdown[1:] if prompt_from_dropdown else prompt_from_dropdown
+
+    # Add user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": prompt_from_dropdown, "avatar": "👤"})
+    # Display user message in chat message container
     with st.chat_message("user", avatar="👤"):
         st.markdown(prompt_from_dropdown, unsafe_allow_html=True)
+
+    # Simulate bot thinking
     with st.chat_message("assistant", avatar="🤖"):
         message_placeholder = st.empty()
-        with st.spinner("Generating response..."):
+        generating_response_text = "Generating response..."
+        with st.spinner(generating_response_text):
+            # Extract dynamic placeholders
             dynamic_placeholders = extract_dynamic_placeholders(prompt_from_dropdown)
+            # Tokenize input
             inputs = tokenizer(prompt_from_dropdown, padding=True, truncation=True, return_tensors="pt").to(device)
+            # Make prediction
             with torch.no_grad():
                 outputs = model(**inputs)
                 logits = outputs.logits
             prediction = torch.argmax(logits, dim=-1).item()
             predicted_category_name = category_labels.get(prediction, "Unknown Category")
+            # Get and format response
             initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand. Could you rephrase?")
             full_response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
-        message_placeholder.markdown(full_response, unsafe_allow_html=True)
-    st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
-    # Consider removing rerun or clearing selectbox if it causes issues
-    # st.rerun()
+            # Simulate processing time (optional)
+            # time.sleep(1)
 
-# --- Input box at the bottom (no changes) ---
+        message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+
+    # Add assistant message to chat history
+    st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+    # Clear the selectbox after processing (optional)
+    # st.session_state.query_selectbox = "" # This might cause issues if user wants to resubmit
+    # st.experimental_rerun() # Might be too disruptive
+
+
+# Input box at the bottom (always displayed)
 if prompt := st.chat_input("Enter your question:"):
+    # Capitalize the first letter
     prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
+
     if not prompt.strip():
+        # Handle empty input gracefully without adding it as a user message? Or show error?
+        # Option 1: Do nothing (might be confusing)
+        # Option 2: Show a temporary error message
         st.toast("⚠️ Please enter a question.", icon="⚠️")
+        # Or add error to chat (as before)
+        # st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
+        # with st.chat_message("user", avatar="👤"): st.markdown(prompt, unsafe_allow_html=True)
+        # error_msg = "Please enter a valid question. You cannot send empty messages."
+        # with st.chat_message("assistant", avatar="🤖"): st.error(error_msg)
+        # st.session_state.chat_history.append({"role": "assistant", "content": error_msg, "avatar": "🤖"})
     else:
+        # Add user message to chat history
         st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
+        # Display user message
         with st.chat_message("user", avatar="👤"):
             st.markdown(prompt, unsafe_allow_html=True)
+
+        # Simulate bot thinking
         with st.chat_message("assistant", avatar="🤖"):
             message_placeholder = st.empty()
-            with st.spinner("Generating response..."):
+            generating_response_text = "Generating response..."
+            with st.spinner(generating_response_text):
+                # Extract dynamic placeholders
                 dynamic_placeholders = extract_dynamic_placeholders(prompt)
+                # Tokenize input
                 inputs = tokenizer(prompt, padding=True, truncation=True, return_tensors="pt").to(device)
+                # Make prediction
                 with torch.no_grad():
                     outputs = model(**inputs)
                     logits = outputs.logits
                 prediction = torch.argmax(logits, dim=-1).item()
                 predicted_category_name = category_labels.get(prediction, "Unknown Category")
+                # Get and format response
                 initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand. Could you rephrase?")
                 full_response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
-            message_placeholder.markdown(full_response, unsafe_allow_html=True)
+                # Simulate processing time (optional)
+                # time.sleep(1)
+
+            message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+
+        # Add assistant message to chat history
         st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
-        # No need for rerun here, chat input triggers it automatically
 
-# --- ADD SCROLL TO BOTTOM BUTTON ---
-# Check if there's chat history to justify showing the scroll button (optional, but good UX)
-if st.session_state.chat_history:
-    # Define the JavaScript function
-    js_code = """
-    <script>
-    function scrollToBottom() {
-        // Find the element that contains all chat messages. This might need adjustment
-        // based on Streamlit's internal structure, but targeting the body's scroll height is usually robust.
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-    }
-    </script>
-    """
 
-    # Define the HTML button that calls the JS function
-    # Using a Unicode down arrow ▼ or ↓. Added an ID for styling.
-    # Using fixed positioning to keep it visible.
-    html_button = """
-    <button id="scrollToBottomBtn" onclick="scrollToBottom()">
-        ↓ <!-- Unicode DOWNWARDS ARROW -->
-    </button>
-    """
-
-    # Inject the JavaScript and the button HTML
-    st.markdown(js_code + html_button, unsafe_allow_html=True)
-
-# --- Reset Button (Placed after potential scroll button injection) ---
-# Use columns to place Reset Button next to where the scroll button might appear visually,
-# or just place it below everything else. Let's put it at the bottom left.
-if st.session_state.chat_history:
-    # Simple placement at the bottom
+# Conditionally display reset button (using the globally defined style)
+if st.session_state.chat_history: # Check if chat_history is not empty
+    # Place the reset button in the sidebar or at the bottom
+    # st.sidebar.button("Reset Chat", key="reset_button_sidebar", on_click=lambda: st.session_state.update(chat_history=[])) # Example for sidebar
     if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
-        st.rerun() # Rerun to clear display
+        st.rerun() # Rerun the Streamlit app to clear the chat display immediately
