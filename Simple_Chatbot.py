@@ -185,35 +185,35 @@ def extract_dynamic_placeholders(user_question):
 # Apply custom CSS for ALL buttons globally at the start
 st.markdown(
     """
-    <style>
-    .stButton>button {
-        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Stylish gradient */
-        color: white !important; /* Ensure text is white */
-        border: none;
-        border-radius: 25px; /* Rounded corners */
-        padding: 10px 20px; /* Padding */
-        font-size: 1.2em; /* Font size */
-        font-weight: bold; /* Bold text */
-        cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease; /* Smooth transitions */
-        display: inline-flex; /* Helps with alignment */
-        align-items: center;
-        justify-content: center;
-        margin-top: 5px; /* Adjust slightly if needed for alignment with selectbox */
-        width: auto; /* Fit content width */
-        min-width: 150px; /* Optional: ensure a minimum width */
-    }
-    .stButton>button:hover {
-        transform: scale(1.05); /* Slightly larger on hover */
-        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Shadow on hover */
-        color: white !important; /* Ensure text stays white on hover */
-    }
-    .stButton>button:active {
-        transform: scale(0.98); /* Slightly smaller when clicked */
-    }
-    /* Target the specific button container if needed, but general style is applied */
-    /* div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] { ... } */
-    </style>
+<style>
+.stButton>button {
+    background: linear-gradient(90deg, #ff8a00, #e52e71); /* Stylish gradient */
+    color: white !important; /* Ensure text is white */
+    border: none;
+    border-radius: 25px; /* Rounded corners */
+    padding: 10px 20px; /* Padding */
+    font-size: 1.2em; /* Font size */
+    font-weight: bold; /* Bold text */
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease; /* Smooth transitions */
+    display: inline-flex; /* Helps with alignment */
+    align-items: center;
+    justify-content: center;
+    margin-top: 5px; /* Adjust slightly if needed for alignment with selectbox */
+    width: auto; /* Fit content width */
+    min-width: 150px; /* Optional: ensure a minimum width */
+}
+.stButton>button:hover {
+    transform: scale(1.05); /* Slightly larger on hover */
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Shadow on hover */
+    color: white !important; /* Ensure text stays white on hover */
+}
+.stButton>button:active {
+    transform: scale(0.98); /* Slightly smaller when clicked */
+}
+/* Target the specific button container if needed, but general style is applied */
+/* div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] { ... } */
+</style>
     """,
     unsafe_allow_html=True,
 )
@@ -221,17 +221,29 @@ st.markdown(
 # Custom CSS for the "Ask this question" button
 st.markdown(
     """
-    <style>
-    div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button:nth-of-type(1) {
-        background: linear-gradient(90deg, #29ABE2, #0077B6); /* Different gradient */
-        color: white !important;
-    }
-    </style>
+<style>
+div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button:nth-of-type(1) {
+    background: linear-gradient(90deg, #29ABE2, #0077B6); /* Different gradient */
+    color: white !important;
+}
+</style>
     """,
     unsafe_allow_html=True,
 )
 
 # --- END OF MOVED CSS ---
+# Custom CSS for horizontal line separator
+st.markdown(
+    """
+<style>
+    .horizontal-line {
+        border-top: 2px solid #e0e0e0; /* Adjust color and thickness as needed */
+        margin: 15px 0; /* Adjust spacing above and below the line */
+    }
+</style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 # Streamlit UI
@@ -263,18 +275,20 @@ selected_query = st.selectbox(
 # Place the button directly below the selectbox
 process_query_button = st.button("Ask this question", key="query_button") # Shorter text might fit better
 
-
 # Initialize chat history in session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
+# Variable to track the role of the last message
+last_role = None
+
 # Display chat messages from history on app rerun
 for message in st.session_state.chat_history:
-    if message["role"] == "separator":
-        st.markdown(message["content"], unsafe_allow_html=True) # Render horizontal line
-    else:
-        with st.chat_message(message["role"], avatar=message["avatar"]):
-            st.markdown(message["content"], unsafe_allow_html=True)
+    if message["role"] == "user" and last_role == "assistant":
+        st.markdown("<div class='horizontal-line'></div>", unsafe_allow_html=True)
+    with st.chat_message(message["role"], avatar=message["avatar"]):
+        st.markdown(message["content"], unsafe_allow_html=True)
+    last_role = message["role"]
 
 
 # Process selected query from dropdown if button is clicked and query is selected
@@ -286,15 +300,15 @@ if process_query_button:
         # Capitalize the first letter
         prompt_from_dropdown = prompt_from_dropdown[0].upper() + prompt_from_dropdown[1:] if prompt_from_dropdown else prompt_from_dropdown
 
-        # Add separator if there is chat history already
-        if st.session_state.chat_history:
-            st.session_state.chat_history.append({"role": "separator", "content": "<hr style='margin-top: 10px; margin-bottom: 10px;'>"}) # Added separator
-
         # Add user message to chat history
         st.session_state.chat_history.append({"role": "user", "content": prompt_from_dropdown, "avatar": "👤"})
         # Display user message in chat message container
+        if last_role == "assistant":
+            st.markdown("<div class='horizontal-line'></div>", unsafe_allow_html=True)
         with st.chat_message("user", avatar="👤"):
             st.markdown(prompt_from_dropdown, unsafe_allow_html=True)
+
+        last_role = "user" # Update last_role after user message
 
         # Simulate bot thinking
         with st.chat_message("assistant", avatar="🤖"):
@@ -321,10 +335,10 @@ if process_query_button:
 
         # Add assistant message to chat history
         st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+        last_role = "assistant" # Update last_role after assistant message
         # Clear the selectbox after processing (optional)
         # st.session_state.query_selectbox = "" # This might cause issues if user wants to resubmit
         # st.experimental_rerun() # Might be too disruptive
-
 
 # Input box at the bottom (always displayed)
 if prompt := st.chat_input("Enter your own question:"):
@@ -343,15 +357,15 @@ if prompt := st.chat_input("Enter your own question:"):
         # with st.chat_message("assistant", avatar="🤖"): st.error(error_msg)
         # st.session_state.chat_history.append({"role": "assistant", "content": error_msg, "avatar": "🤖"})
     else:
-        # Add separator if there is chat history already
-        if st.session_state.chat_history:
-            st.session_state.chat_history.append({"role": "separator", "content": "<hr style='margin-top: 10px; margin-bottom: 10px;'>"}) # Added separator
-
         # Add user message to chat history
         st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
+
+        if last_role == "assistant":
+            st.markdown("<div class='horizontal-line'></div>", unsafe_allow_html=True)
         # Display user message
         with st.chat_message("user", avatar="👤"):
             st.markdown(prompt, unsafe_allow_html=True)
+        last_role = "user" # Update last_role after user message
 
         # Simulate bot thinking
         with st.chat_message("assistant", avatar="🤖"):
@@ -378,7 +392,7 @@ if prompt := st.chat_input("Enter your own question:"):
 
         # Add assistant message to chat history
         st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
-
+        last_role = "assistant" # Update last_role after assistant message
 
 # Conditionally display reset button (using the globally defined style)
 if st.session_state.chat_history: # Check if chat_history is not empty
@@ -386,4 +400,5 @@ if st.session_state.chat_history: # Check if chat_history is not empty
     # st.sidebar.button("Reset Chat", key="reset_button_sidebar", on_click=lambda: st.session_state.update(chat_history=[])) # Example for sidebar
     if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
+        last_role = None # Reset last_role as well
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
