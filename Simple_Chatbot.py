@@ -275,7 +275,9 @@ if "last_response_displayed" not in st.session_state:
     st.session_state.last_response_displayed = False
 
 # Display chat messages from history on app rerun
-for message in st.session_state.chat_history:
+for i, message in enumerate(st.session_state.chat_history):
+    if i > 0:  # Add divider before each message except the first one
+        st.divider()
     with st.chat_message(message["role"], avatar=message["avatar"]):
         st.markdown(message["content"], unsafe_allow_html=True)
 
@@ -285,8 +287,7 @@ st.session_state.last_response_displayed = False
 
 # Process selected query from dropdown if button is clicked and query is selected
 if process_query_button and selected_query and selected_query != "Choose your option": # Added condition to check if it's not the placeholder
-    if st.session_state.chat_history: # Check if there's chat history (meaning it's not the very first query)
-        st.divider() # Display divider before new query
+    # No need for divider here anymore
 
     prompt_from_dropdown = selected_query
     # Capitalize the first letter
@@ -331,8 +332,7 @@ if process_query_button and selected_query and selected_query != "Choose your op
 
 # Input box at the bottom (always displayed)
 if prompt := st.chat_input("Enter your own question:"):
-    if st.session_state.chat_history: # Check if there's chat history (meaning it's not the very first query)
-        st.divider() # Display divider before new query
+    # No need for divider here anymore
 
     # Capitalize the first letter
     prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
