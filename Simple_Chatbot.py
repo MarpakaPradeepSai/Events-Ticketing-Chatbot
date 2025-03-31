@@ -317,7 +317,7 @@ if process_query_button and selected_query:
 
 
 # Input box at the bottom (always displayed)
-if prompt := st.chat_input("Enter your question:"):
+if prompt := st.chat_input("Enter your own question:"):
     # Capitalize the first letter
     prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
 
