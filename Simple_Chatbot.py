@@ -275,45 +275,48 @@ for message in st.session_state.chat_history:
 
 
 # Process selected query from dropdown if button is clicked and query is selected
-if process_query_button and selected_query and selected_query != "Choose your question": # Modified condition here
-    prompt_from_dropdown = selected_query
-    # Capitalize the first letter
-    prompt_from_dropdown = prompt_from_dropdown[0].upper() + prompt_from_dropdown[1:] if prompt_from_dropdown else prompt_from_dropdown
+if process_query_button:
+    if selected_query == "Choose your question":
+        st.error("⚠️ Please select your question from the dropdown.", icon="⚠️")
+    elif selected_query:
+        prompt_from_dropdown = selected_query
+        # Capitalize the first letter
+        prompt_from_dropdown = prompt_from_dropdown[0].upper() + prompt_from_dropdown[1:] if prompt_from_dropdown else prompt_from_dropdown
 
-    # Add user message to chat history
-    st.session_state.chat_history.append({"role": "user", "content": prompt_from_dropdown, "avatar": "👤"})
-    # Display user message in chat message container
-    with st.chat_message("user", avatar="👤"):
-        st.markdown(prompt_from_dropdown, unsafe_allow_html=True)
+        # Add user message to chat history
+        st.session_state.chat_history.append({"role": "user", "content": prompt_from_dropdown, "avatar": "👤"})
+        # Display user message in chat message container
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(prompt_from_dropdown, unsafe_allow_html=True)
 
-    # Simulate bot thinking
-    with st.chat_message("assistant", avatar="🤖"):
-        message_placeholder = st.empty()
-        generating_response_text = "Generating response..."
-        with st.spinner(generating_response_text):
-            # Extract dynamic placeholders
-            dynamic_placeholders = extract_dynamic_placeholders(prompt_from_dropdown)
-            # Tokenize input
-            inputs = tokenizer(prompt_from_dropdown, padding=True, truncation=True, return_tensors="pt").to(device)
-            # Make prediction
-            with torch.no_grad():
-                outputs = model(**inputs)
-                logits = outputs.logits
-            prediction = torch.argmax(logits, dim=-1).item()
-            predicted_category_name = category_labels.get(prediction, "Unknown Category")
-            # Get and format response
-            initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand. Could you rephrase?")
-            full_response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
-            # Simulate processing time (optional)
-            # time.sleep(1)
+        # Simulate bot thinking
+        with st.chat_message("assistant", avatar="🤖"):
+            message_placeholder = st.empty()
+            generating_response_text = "Generating response..."
+            with st.spinner(generating_response_text):
+                # Extract dynamic placeholders
+                dynamic_placeholders = extract_dynamic_placeholders(prompt_from_dropdown)
+                # Tokenize input
+                inputs = tokenizer(prompt_from_dropdown, padding=True, truncation=True, return_tensors="pt").to(device)
+                # Make prediction
+                with torch.no_grad():
+                    outputs = model(**inputs)
+                    logits = outputs.logits
+                prediction = torch.argmax(logits, dim=-1).item()
+                predicted_category_name = category_labels.get(prediction, "Unknown Category")
+                # Get and format response
+                initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand. Could you rephrase?")
+                full_response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
+                # Simulate processing time (optional)
+                # time.sleep(1)
 
-        message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+            message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
 
-    # Add assistant message to chat history
-    st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
-    # Clear the selectbox after processing (optional)
-    # st.session_state.query_selectbox = "" # This might cause issues if user wants to resubmit
-    # st.experimental_rerun() # Might be too disruptive
+        # Add assistant message to chat history
+        st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+        # Clear the selectbox after processing (optional)
+        # st.session_state.query_selectbox = "" # This might cause issues if user wants to resubmit
+        # st.experimental_rerun() # Might be too disruptive
 
 
 # Input box at the bottom (always displayed)
