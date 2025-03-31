@@ -275,7 +275,7 @@ for message in st.session_state.chat_history:
 
 
 # Process selected query from dropdown if button is clicked and query is selected
-if process_query_button and selected_query and selected_query != "Choose your option": # Added condition to check if it's not the placeholder
+if process_query_button and selected_query and selected_query != "Choose your question": # Modified condition here
     prompt_from_dropdown = selected_query
     # Capitalize the first letter
     prompt_from_dropdown = prompt_from_dropdown[0].upper() + prompt_from_dropdown[1:] if prompt_from_dropdown else prompt_from_dropdown
@@ -373,4 +373,3 @@ if st.session_state.chat_history: # Check if chat_history is not empty
     if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
-
