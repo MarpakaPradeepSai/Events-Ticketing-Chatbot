@@ -6,12 +6,12 @@ import os
 import requests
 import time  # For simulating processing time
 
-# --- CSS for Times New Roman Font and Buttons ---
+# --- Updated CSS for Times New Roman Font and Buttons ---
 st.markdown(
     """
     <style>
-    /* Apply Times New Roman font to the entire body */
-    body {
+    /* Apply Times New Roman font to chat messages and general text */
+    body, .stChatMessage, .stChatMessage * {
         font-family: 'Times New Roman', serif !important;
     }
     .stButton>button {
