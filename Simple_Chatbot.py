@@ -202,7 +202,6 @@ st.markdown(
     margin-top: 5px; /* Adjust slightly if needed for alignment with selectbox */
     width: auto; /* Fit content width */
     min-width: 150px; /* Optional: ensure a minimum width */
-    font-family: 'Times New Roman', Times, serif !important; /* Times New Roman for buttons */
 }
 .stButton>button:hover {
     transform: scale(1.05); /* Slightly larger on hover */
@@ -212,32 +211,8 @@ st.markdown(
 .stButton>button:active {
     transform: scale(0.98); /* Slightly smaller when clicked */
 }
-
-/* Apply Times New Roman to all text elements */
-* {
-    font-family: 'Times New Roman', Times, serif !important;
-}
-
-/* Specific adjustments for Streamlit elements if needed (example for selectbox - may vary) */
-.stSelectbox > div > div > div > div {
-    font-family: 'Times New Roman', Times, serif !important;
-}
-.stTextInput > div > div > input {
-    font-family: 'Times New Roman', Times, serif !important;
-}
-.stTextArea > div > div > textarea {
-    font-family: 'Times New Roman', Times, serif !important;
-}
-.stChatMessage {
-    font-family: 'Times New Roman', Times, serif !important;
-}
-.st-emotion-cache-r421ms { /* Example class for st.error, st.warning, etc. - Inspect element to confirm */
-    font-family: 'Times New Roman', Times, serif !important;
-}
-.streamlit-expanderContent { /* For text inside expanders if used */
-    font-family: 'Times New Roman', Times, serif !important;
-}
-
+/* Target the specific button container if needed, but general style is applied */
+/* div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] { ... } */
 </style>
     """,
     unsafe_allow_html=True,
@@ -427,3 +402,5 @@ if st.session_state.chat_history: # Check if chat_history is not empty
         st.session_state.chat_history = []
         last_role = None # Reset last_role as well
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
+
+
