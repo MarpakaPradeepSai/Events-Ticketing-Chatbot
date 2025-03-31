@@ -6,122 +6,7 @@ import os
 import requests
 import time  # For simulating processing time
 
-# --- Page Configuration and Theme ---
-st.set_page_config(page_title="Event Ticketing Chatbot", page_icon="🎟️", layout="wide", initial_sidebar_state="collapsed")
-st.set_theme(theme="light") # Or try "dark", "streamlit", "monokai", "agate", "oceanic"
-
-# --- Custom CSS ---
-st.markdown(
-    """
-    <style>
-    /* --- General App Styling --- */
-    body {
-        background-color: #f8f9fa; /* Light background */
-        color: #343a40; /* Darker text for readability */
-        font-family: sans-serif;
-    }
-    .stApp {
-        max-width: 900px; /* Limit app width for better readability on large screens */
-        margin: 0 auto; /* Center the app on the page */
-        padding: 20px;
-    }
-
-    /* --- Headers and Titles --- */
-    h1, h2, h3, h4, h5, h6 {
-        color: #e52e71; /*  Use your accent color for headers */
-        font-weight: bold;
-    }
-
-    /* --- Chat Message Bubbles --- */
-    .stChatMessage[data-testid="stChatMessageContent"] {
-        border-radius: 20px;
-        padding: 10px 15px;
-        margin-bottom: 10px;
-    }
-    .stChatMessage[data-testid="stChatMessageContent"].user {
-        background-color: #e0f7fa; /* Light blue for user messages */
-        color: #004d40; /* Dark teal text for user messages */
-        border: 1px solid #b2ebf2;
-    }
-    .stChatMessage[data-testid="stChatMessageContent"].assistant {
-        background-color: #f0f0f0; /* Light grey for assistant messages */
-        color: #212529; /* Dark grey text for assistant messages */
-        border: 1px solid #d9d9d9;
-    }
-
-    /* --- Input Box Styling --- */
-    div[data-testid="stChatInputContainer"] > div {
-        border-radius: 25px;
-        border: 1px solid #ced4da; /* Light grey border */
-        padding: 5px 10px;
-        background-color: white;
-    }
-
-    /* --- Selectbox Styling --- */
-    div[data-testid="stSelectbox"] > label {
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] {
-        border-radius: 25px;
-        border: 1px solid #ced4da;
-    }
-
-    /* --- Button Styling --- */
-    .stButton>button {
-        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Stylish gradient */
-        color: white !important; /* Ensure text is white */
-        border: none;
-        border-radius: 25px; /* Rounded corners */
-        padding: 10px 20px; /* Padding */
-        font-size: 1.2em; /* Font size */
-        font-weight: bold; /* Bold text */
-        cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease; /* Smooth transitions */
-        display: inline-flex; /* Helps with alignment */
-        align-items: center;
-        justify-content: center;
-        margin-top: 5px; /* Adjust slightly if needed for alignment with selectbox */
-        width: auto; /* Fit content width */
-        min-width: 150px; /* Optional: ensure a minimum width */
-    }
-    .stButton>button:hover {
-        transform: scale(1.05); /* Slightly larger on hover */
-        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Shadow on hover */
-        color: white !important; /* Ensure text stays white on hover */
-    }
-    .stButton>button:active {
-        transform: scale(0.98); /* Slightly smaller when clicked */
-    }
-    div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button:nth-of-type(1) {
-        background: linear-gradient(90deg, #29ABE2, #0077B6); /* Different gradient for "Ask this question" */
-        color: white !important;
-    }
-
-    /* --- Reset Button Styling --- */
-    #reset_button { /* Targeting by ID, ensure your reset button has this ID if needed */
-        background-color: #dc3545; /* Red color for reset */
-        color: white !important;
-    }
-    #reset_button:hover {
-        background-color: #c82333;
-    }
-
-
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# --- Sidebar (Optional About Section) ---
-with st.sidebar:
-    st.header("About TicketBot")
-    st.write("Your friendly AI assistant for all things event ticketing! Ask me questions about buying, cancelling, refunding tickets, and more.")
-    st.markdown("[GitHub Repository](Your-GitHub-Repo-Link-Here)") # Replace with your repo link
-    st.markdown("Made with ❤️ using Streamlit, Transformers, and SpaCy")
-
-
-# --- Function to download files from GitHub ---
+# Function to download files from GitHub (same as before)
 def download_from_github(repo_url, file_name, save_path):
     file_url = f"{repo_url}/{file_name}"
     response = requests.get(file_url)
@@ -131,15 +16,20 @@ def download_from_github(repo_url, file_name, save_path):
     else:
         raise Exception(f"Failed to download {file_name} from GitHub. Status code: {response.status_code}")
 
-# --- Paths and Model Loading ---
+# Path where you want to save the downloaded model files (same as before)
 model_dir = "./albert_model"
+
+# Ensure model directory exists (same as before)
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
 
+# List of files to download from GitHub (same as before)
 repo_url = 'https://github.com/MarpakaPradeepSai/Simple-Events-Ticketing-Customer-Support-Chatbot/raw/main/ALBERT_Model'
 files = ['config.json', 'model.safetensors', 'special_tokens_map.json', 'spiece.model', 'tokenizer_config.json']
 
+# Download all model files from GitHub (same as before)
 for file in files:
+    # Add a check if file exists to avoid redownloading
     file_path = os.path.join(model_dir, file)
     if not os.path.exists(file_path):
         print(f"Downloading {file}...")
@@ -148,9 +38,13 @@ for file in files:
         except Exception as e:
             st.error(f"Failed to download required model file: {file}. Error: {e}")
             st.stop()
+    # else:
+    #     print(f"{file} already exists.") # Optional: uncomment for debugging
 
+# Load the spaCy model for NER (same as before)
 @st.cache_resource
 def load_spacy_model():
+    # Use a more robust way to check/download spacy model if needed
     try:
         nlp = spacy.load("en_core_web_trf")
     except OSError:
@@ -159,14 +53,16 @@ def load_spacy_model():
         nlp = spacy.load("en_core_web_trf")
     return nlp
 
+# Initialize the spaCy model (same as before)
 nlp = load_spacy_model()
 
+# Load the fine-tuned model and tokenizer from the local directory (same as before)
 @st.cache_resource
 def load_model_and_tokenizer():
     try:
         model = AutoModelForSequenceClassification.from_pretrained(model_dir)
         tokenizer = AutoTokenizer.from_pretrained(model_dir)
-        model.eval()
+        model.eval()  # Set to evaluation mode
         return model, tokenizer
     except Exception as e:
         st.error(f"Error loading model or tokenizer from {model_dir}: {str(e)}")
@@ -174,14 +70,16 @@ def load_model_and_tokenizer():
 
 model, tokenizer = load_model_and_tokenizer()
 
+# Check if the model and tokenizer loaded successfully (same as before)
 if model is None or tokenizer is None:
-    st.error("Model or Tokenizer failed to load. Please check the console for errors.")
-    st.stop()
+    st.error("Model or Tokenizer failed to load. Please check the console for errors and ensure model files are downloaded correctly.")
+    st.stop()  # Halt execution if model loading fails
 
+# Set device to CPU (same as before)
 device = torch.device("cpu")
 model.to(device)
 
-# --- Category Labels and Responses ---
+# Category labels mapping (same as before)
 category_labels = {
     0: "buy_ticket", 1: "cancel_ticket", 2: "change_personal_details_on_ticket", 3: "check_cancellation_fee", 4: "check_cancellation_policy",
     5: "check_privacy_policy", 6: "check_refund_policy", 7: "customer_service", 8: "delivery_options", 9: "delivery_period",
@@ -190,6 +88,7 @@ category_labels = {
     22: "track_refund", 23: "transfer_ticket", 24: "upgrade_ticket"
 }
 
+# Response templates (same as before)
 responses = {
     'cancel_ticket': 'To cancel your ticket for the {{EVENT}} in {{CITY}}, please follow these steps:\n\n1. Access {{WEBSITE_URL}} and sign in to your account.\n2. Go to the {{CANCEL_TICKET_SECTION}} section.\n3. Locate your upcoming events and click on the {{EVENT}} in {{CITY}}.\n4. Select the {{CANCEL_TICKET_OPTION}} option.\n5. Complete the prompts to finalize your cancellation.\n\nIf any issues arise, do not hesitate to reach out to our customer support for further help.',
     'buy_ticket': "To acquire a ticket for the {{EVENT}} in {{CITY}}, please undertake the following steps:\n\n1. Access {{WEBSITE_URL}} or launch the {{APP}}.\n2. Proceed to the {{TICKET_SECTION}} segment.\n3. Input the specifics of the desired event or performance.\n4. Identify and select the event from the listed search results.\n5. Specify the quantity of tickets and choose preferred seating arrangements (if applicable).\n6. Move to the checkout phase and provide the required payment details.\n\nUpon completion of your purchase, you will receive an email confirmation containing your ticket information.",
@@ -218,6 +117,7 @@ responses = {
     'upgrade_ticket': "To upgrade your ticket for the upcoming event, please follow these instructions:\n\n1. Go to {{WEBSITE_URL}}.\n2. Sign in with your username and password.\n3. Proceed to the {{TICKET_SECTION}} area.\n4. Find your current ticket purchase listed under {{UPGRADE_TICKET_INFORMATION}} and select the {{UPGRADE_TICKET_OPTION}} button.\n5. Adhere to the on-screen directions to select your intended upgrade and verify the modifications.\n\nIf you face any difficulties throughout this process, reach out to our support team for additional help."
 }
 
+# Define static placeholders (same as before)
 static_placeholders = {
     "{{WEBSITE_URL}}": "www.events-ticketing.com", "{{SUPPORT_TEAM_LINK}}": "www.support-team.com", "{{CONTACT_SUPPORT_LINK}}" : "www.support-team.com",
     "{{SUPPORT_CONTACT_LINK}}" : "www.support-team.com", "{{CANCEL_TICKET_SECTION}}": "<b>Cancel Ticket</b>", "{{CANCEL_TICKET_OPTION}}": "<b>Cancel Ticket</b>",
@@ -246,131 +146,232 @@ static_placeholders = {
     "{{ASSISTANCE_SECTION}}" : "<b>Assistance Section</b>"
 }
 
+# Function to replace placeholders (same as before)
 def replace_placeholders(response, dynamic_placeholders, static_placeholders):
     for placeholder, value in static_placeholders.items():
         response = response.replace(placeholder, value)
     for placeholder, value in dynamic_placeholders.items():
         response = response.replace(placeholder, value)
-    response = response.replace("{{EVENT}}", "the event") # Fallback
-    response = response.replace("{{CITY}}", "the city")   # Fallback
+    # Add a fallback for any missed placeholders
+    response = response.replace("{{EVENT}}", "the event")
+    response = response.replace("{{CITY}}", "the city")
     return response
 
+# Function to extract dynamic placeholders using SpaCy (same as before)
 def extract_dynamic_placeholders(user_question):
     doc = nlp(user_question)
     dynamic_placeholders = {}
     event_found = False
     city_found = False
     for ent in doc.ents:
-        if ent.label_ == "EVENT" and not event_found:
+        if ent.label_ == "EVENT" and not event_found: # Assuming 'EVENT' label
             event_text = ent.text.title()
             dynamic_placeholders['{{EVENT}}'] = f"<b>{event_text}</b>"
             event_found = True
-        elif ent.label_ == "GPE" and not city_found:
+        elif ent.label_ == "GPE" and not city_found: # GPE for cities
             city_text = ent.text.title()
             dynamic_placeholders['{{CITY}}'] = f"<b>{city_text}</b>"
             city_found = True
 
+    # Use defaults only if specific entities weren't found
     if not event_found:
-        dynamic_placeholders['{{EVENT}}'] = "the event"
+        dynamic_placeholders['{{EVENT}}'] = "the event" # More neutral default
     if not city_found:
-        dynamic_placeholders['{{CITY}}'] = "the city"
+        dynamic_placeholders['{{CITY}}'] = "the city" # More neutral default
+
     return dynamic_placeholders
 
+# --- MOVED CSS HERE ---
+# Apply custom CSS for ALL buttons globally at the start
+st.markdown(
+    """
+    <style>
+    .stButton>button {
+        background: linear-gradient(90deg, #ff8a00, #e52e71); /* Stylish gradient */
+        color: white !important; /* Ensure text is white */
+        border: none;
+        border-radius: 25px; /* Rounded corners */
+        padding: 10px 20px; /* Padding */
+        font-size: 1.2em; /* Font size */
+        font-weight: bold; /* Bold text */
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease; /* Smooth transitions */
+        display: inline-flex; /* Helps with alignment */
+        align-items: center;
+        justify-content: center;
+        margin-top: 5px; /* Adjust slightly if needed for alignment with selectbox */
+        width: auto; /* Fit content width */
+        min-width: 150px; /* Optional: ensure a minimum width */
+    }
+    .stButton>button:hover {
+        transform: scale(1.05); /* Slightly larger on hover */
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3); /* Shadow on hover */
+        color: white !important; /* Ensure text stays white on hover */
+    }
+    .stButton>button:active {
+        transform: scale(0.98); /* Slightly smaller when clicked */
+    }
+    /* Target the specific button container if needed, but general style is applied */
+    /* div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] { ... } */
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-# --- Streamlit UI ---
-st.header("🎟️ Event Ticketing Chatbot") # Main title using header style
-st.write("Ask me anything about ticketing for your events! I can help with purchases, cancellations, refunds, and more.")
+# Custom CSS for the "Ask this question" button
+st.markdown(
+    """
+    <style>
+    div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button:nth-of-type(1) {
+        background: linear-gradient(90deg, #29ABE2, #0077B6); /* Different gradient */
+        color: white !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-# --- Example Queries Dropdown ---
+# --- END OF MOVED CSS ---
+
+
+# Streamlit UI
+st.title("Simple Events Ticketing Chatbot")
+st.write("Ask me anything about ticketing for your events!")
+
+# Define example queries for the dropdown
 example_queries = [
     "How do I buy a ticket?",
-    "What is the cancellation policy for tickets?",
-    "I need to get a refund for my event ticket.",
-    "Can I change the personal details on my ticket?",
-    "What upcoming events are there in New York?",
-    "How can I contact customer service for ticketing?",
-    "Which payment methods do you accept for ticket purchases?",
-    "I'm having trouble with my payment, what should I do?",
-    "Is it possible to sell my ticket if I can't attend?",
-    "How can I track the status of my ticket refund?",
+    "What is the cancellation policy?",
+    "I want to get a refund for my ticket.",
+    "How can I change my ticket details?",
+    "Tell me about upcoming events in London.",
+    "How to contact customer service?",
+    "What payment methods are accepted?",
+    "I need to report a payment issue.",
+    "Can I sell my ticket?",
+    "How to track my refund?",
 ]
 
+# Dropdown and Button section (always displayed at the top)
 selected_query = st.selectbox(
-    "Choose a quick question:", # More user-friendly label for selectbox
+    "Choose a query from examples:",
     [""] + example_queries,
     key="query_selectbox",
-    label_visibility="collapsed" # Hide default label if title is clear enough
+    label_visibility="collapsed" # Hide label if title is clear enough
 )
-process_query_button = st.button("Ask this question", key="query_button")
 
-# --- Chat History Initialization and Display ---
+# Place the button directly below the selectbox
+process_query_button = st.button("Ask this question", key="query_button") # Shorter text might fit better
+
+
+# Initialize chat history in session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
-    st.session_state.chat_history.append({"role": "assistant", "content": "Welcome! How can I help you with event ticketing today?", "avatar": "🤖"}) # Welcome message
 
+# Display chat messages from history on app rerun
 for message in st.session_state.chat_history:
     with st.chat_message(message["role"], avatar=message["avatar"]):
         st.markdown(message["content"], unsafe_allow_html=True)
 
-# --- Process Selected Query from Dropdown ---
+
+# Process selected query from dropdown if button is clicked and query is selected
 if process_query_button and selected_query:
     prompt_from_dropdown = selected_query
+    # Capitalize the first letter
     prompt_from_dropdown = prompt_from_dropdown[0].upper() + prompt_from_dropdown[1:] if prompt_from_dropdown else prompt_from_dropdown
 
+    # Add user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": prompt_from_dropdown, "avatar": "👤"})
+    # Display user message in chat message container
     with st.chat_message("user", avatar="👤"):
         st.markdown(prompt_from_dropdown, unsafe_allow_html=True)
 
+    # Simulate bot thinking
     with st.chat_message("assistant", avatar="🤖"):
         message_placeholder = st.empty()
         generating_response_text = "Generating response..."
         with st.spinner(generating_response_text):
+            # Extract dynamic placeholders
             dynamic_placeholders = extract_dynamic_placeholders(prompt_from_dropdown)
+            # Tokenize input
             inputs = tokenizer(prompt_from_dropdown, padding=True, truncation=True, return_tensors="pt").to(device)
+            # Make prediction
             with torch.no_grad():
                 outputs = model(**inputs)
                 logits = outputs.logits
             prediction = torch.argmax(logits, dim=-1).item()
             predicted_category_name = category_labels.get(prediction, "Unknown Category")
-            initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand. Could you rephrase your question?") # Improved "unknown" response
+            # Get and format response
+            initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand. Could you rephrase?")
             full_response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
-            # time.sleep(1) # Simulate processing time - optional
+            # Simulate processing time (optional)
+            # time.sleep(1)
 
-        message_placeholder.markdown(full_response, unsafe_allow_html=True)
+        message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+
+    # Add assistant message to chat history
     st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
+    # Clear the selectbox after processing (optional)
+    # st.session_state.query_selectbox = "" # This might cause issues if user wants to resubmit
+    # st.experimental_rerun() # Might be too disruptive
 
 
-# --- Input Box for User Questions ---
-if prompt := st.chat_input("Type your question here..."): # More descriptive placeholder
+# Input box at the bottom (always displayed)
+if prompt := st.chat_input("Enter your question:"):
+    # Capitalize the first letter
     prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
 
     if not prompt.strip():
-        st.toast("⚠️ Please enter a question.", icon="⚠️") # Using toast for empty input feedback
+        # Handle empty input gracefully without adding it as a user message? Or show error?
+        # Option 1: Do nothing (might be confusing)
+        # Option 2: Show a temporary error message
+        st.toast("⚠️ Please enter a question.", icon="⚠️")
+        # Or add error to chat (as before)
+        # st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
+        # with st.chat_message("user", avatar="👤"): st.markdown(prompt, unsafe_allow_html=True)
+        # error_msg = "Please enter a valid question. You cannot send empty messages."
+        # with st.chat_message("assistant", avatar="🤖"): st.error(error_msg)
+        # st.session_state.chat_history.append({"role": "assistant", "content": error_msg, "avatar": "🤖"})
     else:
+        # Add user message to chat history
         st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
+        # Display user message
         with st.chat_message("user", avatar="👤"):
             st.markdown(prompt, unsafe_allow_html=True)
 
+        # Simulate bot thinking
         with st.chat_message("assistant", avatar="🤖"):
             message_placeholder = st.empty()
             generating_response_text = "Generating response..."
             with st.spinner(generating_response_text):
+                # Extract dynamic placeholders
                 dynamic_placeholders = extract_dynamic_placeholders(prompt)
+                # Tokenize input
                 inputs = tokenizer(prompt, padding=True, truncation=True, return_tensors="pt").to(device)
+                # Make prediction
                 with torch.no_grad():
                     outputs = model(**inputs)
                     logits = outputs.logits
                 prediction = torch.argmax(logits, dim=-1).item()
                 predicted_category_name = category_labels.get(prediction, "Unknown Category")
-                initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand. Could you rephrase your question?") # Improved "unknown" response
+                # Get and format response
+                initial_response = responses.get(predicted_category_name, "Sorry, I didn't understand. Could you rephrase?")
                 full_response = replace_placeholders(initial_response, dynamic_placeholders, static_placeholders)
-                # time.sleep(1) # Simulate processing time - optional
+                # Simulate processing time (optional)
+                # time.sleep(1)
 
-            message_placeholder.markdown(full_response, unsafe_allow_html=True)
+            message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+
+        # Add assistant message to chat history
         st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
 
-# --- Reset Chat Button ---
-if st.session_state.chat_history:
+
+# Conditionally display reset button (using the globally defined style)
+if st.session_state.chat_history: # Check if chat_history is not empty
+    # Place the reset button in the sidebar or at the bottom
+    # st.sidebar.button("Reset Chat", key="reset_button_sidebar", on_click=lambda: st.session_state.update(chat_history=[])) # Example for sidebar
     if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
-        st.rerun()
+        st.rerun() # Rerun the Streamlit app to clear the chat display immediately
+
+
