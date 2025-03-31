@@ -277,7 +277,7 @@ for message in st.session_state.chat_history:
 # Process selected query from dropdown if button is clicked and query is selected
 if process_query_button:
     if selected_query == "Choose your question":
-        st.error("⚠️ Please select your question from the dropdown.")#, icon="⚠️")
+        st.error("⚠️ Please select your question from the dropdown.")
     elif selected_query:
         prompt_from_dropdown = selected_query
         # Capitalize the first letter
