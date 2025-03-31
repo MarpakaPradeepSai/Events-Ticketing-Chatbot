@@ -373,3 +373,15 @@ if st.session_state.chat_history: # Check if chat_history is not empty
     if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
+
+# --- Scroll to Bottom Button ---
+if st.session_state.chat_history:
+    scroll_to_bottom_button = st.button("Scroll to Bottom", key="scroll_button")
+
+    if scroll_to_bottom_button:
+        js_scroll_to_bottom = """
+            <script>
+                window.parent.document.querySelector('.stChatMessage:last-child').scrollIntoView({behavior: 'smooth', block: 'end'});
+            </script>
+        """
+        st.components.v1.html(js_scroll_to_bottom)
