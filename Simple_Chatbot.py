@@ -242,7 +242,7 @@ st.markdown(
     border: none;
     border-radius: 25px; /* Rounded corners */
     padding: 10px 20px; /* Padding */
-    font-size: 20em; /* Font size */
+    font-size: 1.2em; /* Font size */
     font-weight: bold; /* Bold text */
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease; /* Smooth transitions */
