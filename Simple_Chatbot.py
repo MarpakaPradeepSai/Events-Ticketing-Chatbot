@@ -255,7 +255,7 @@ example_queries = [
 # Dropdown and Button section (always displayed at the top)
 selected_query = st.selectbox(
     "Choose a query from examples:",
-    ["Choose your option"] + example_queries, # Modified here: Added "Choose your option"
+    ["Choose your question"] + example_queries, # Modified here: Added "Choose your option"
     key="query_selectbox",
     label_visibility="collapsed" # Hide label if title is clear enough
 )
@@ -317,7 +317,7 @@ if process_query_button and selected_query and selected_query != "Choose your op
 
 
 # Input box at the bottom (always displayed)
-if prompt := st.chat_input("Enter your question:"):
+if prompt := st.chat_input("Enter your own question:"):
     # Capitalize the first letter
     prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
 
