@@ -270,15 +270,24 @@ process_query_button = st.button("Ask this question", key="query_button") # Shor
 # Initialize chat history in session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+# Initialize a flag to track if a response was just displayed
+if "last_response_displayed" not in st.session_state:
+    st.session_state.last_response_displayed = False
 
 # Display chat messages from history on app rerun
 for message in st.session_state.chat_history:
     with st.chat_message(message["role"], avatar=message["avatar"]):
         st.markdown(message["content"], unsafe_allow_html=True)
 
+# Reset the flag at the start of each interaction cycle
+st.session_state.last_response_displayed = False
+
 
 # Process selected query from dropdown if button is clicked and query is selected
 if process_query_button and selected_query and selected_query != "Choose your option": # Added condition to check if it's not the placeholder
+    if st.session_state.chat_history: # Check if there's chat history (meaning it's not the very first query)
+        st.divider() # Display divider before new query
+
     prompt_from_dropdown = selected_query
     # Capitalize the first letter
     prompt_from_dropdown = prompt_from_dropdown[0].upper() + prompt_from_dropdown[1:] if prompt_from_dropdown else prompt_from_dropdown
@@ -311,6 +320,7 @@ if process_query_button and selected_query and selected_query != "Choose your op
             # time.sleep(1)
 
         message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+        st.session_state.last_response_displayed = True # Set flag after response
 
     # Add assistant message to chat history
     st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
@@ -321,6 +331,9 @@ if process_query_button and selected_query and selected_query != "Choose your op
 
 # Input box at the bottom (always displayed)
 if prompt := st.chat_input("Enter your own question:"):
+    if st.session_state.chat_history: # Check if there's chat history (meaning it's not the very first query)
+        st.divider() # Display divider before new query
+
     # Capitalize the first letter
     prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
 
@@ -364,6 +377,8 @@ if prompt := st.chat_input("Enter your own question:"):
                 # time.sleep(1)
 
             message_placeholder.markdown(full_response, unsafe_allow_html=True) # Display bot response
+            st.session_state.last_response_displayed = True # Set flag after response
+
 
         # Add assistant message to chat history
         st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
@@ -375,4 +390,5 @@ if st.session_state.chat_history: # Check if chat_history is not empty
     # st.sidebar.button("Reset Chat", key="reset_button_sidebar", on_click=lambda: st.session_state.update(chat_history=[])) # Example for sidebar
     if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
+        st.session_state.last_response_displayed = False # Reset the flag as well
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
