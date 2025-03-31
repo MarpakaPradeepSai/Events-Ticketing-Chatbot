@@ -270,8 +270,11 @@ if "chat_history" not in st.session_state:
 
 # Display chat messages from history on app rerun
 for message in st.session_state.chat_history:
-    with st.chat_message(message["role"], avatar=message["avatar"]):
-        st.markdown(message["content"], unsafe_allow_html=True)
+    if message["role"] == "separator":
+        st.markdown(message["content"], unsafe_allow_html=True) # Render horizontal line
+    else:
+        with st.chat_message(message["role"], avatar=message["avatar"]):
+            st.markdown(message["content"], unsafe_allow_html=True)
 
 
 # Process selected query from dropdown if button is clicked and query is selected
@@ -282,6 +285,10 @@ if process_query_button:
         prompt_from_dropdown = selected_query
         # Capitalize the first letter
         prompt_from_dropdown = prompt_from_dropdown[0].upper() + prompt_from_dropdown[1:] if prompt_from_dropdown else prompt_from_dropdown
+
+        # Add separator if there is chat history already
+        if st.session_state.chat_history:
+            st.session_state.chat_history.append({"role": "separator", "content": "<hr style='margin-top: 10px; margin-bottom: 10px;'>"}) # Added separator
 
         # Add user message to chat history
         st.session_state.chat_history.append({"role": "user", "content": prompt_from_dropdown, "avatar": "👤"})
@@ -336,6 +343,10 @@ if prompt := st.chat_input("Enter your own question:"):
         # with st.chat_message("assistant", avatar="🤖"): st.error(error_msg)
         # st.session_state.chat_history.append({"role": "assistant", "content": error_msg, "avatar": "🤖"})
     else:
+        # Add separator if there is chat history already
+        if st.session_state.chat_history:
+            st.session_state.chat_history.append({"role": "separator", "content": "<hr style='margin-top: 10px; margin-bottom: 10px;'>"}) # Added separator
+
         # Add user message to chat history
         st.session_state.chat_history.append({"role": "user", "content": prompt, "avatar": "👤"})
         # Display user message
