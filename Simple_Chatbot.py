@@ -477,4 +477,3 @@ if st.session_state.chat_history: # Check if chat_history is not empty
         st.session_state.chat_history = []
         last_role = None # Reset last_role as well
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
-
