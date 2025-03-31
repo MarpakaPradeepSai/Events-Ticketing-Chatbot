@@ -317,7 +317,7 @@ if process_query_button and selected_query:
 
 
 # Input box at the bottom (always displayed)
-if prompt := st.chat_input("Enter your own question:", placeholder="Try asking the model"):
+if prompt := st.chat_input("Enter your question:"):
     # Capitalize the first letter
     prompt = prompt[0].upper() + prompt[1:] if prompt else prompt
 
@@ -373,3 +373,5 @@ if st.session_state.chat_history: # Check if chat_history is not empty
     if st.button("Reset Chat", key="reset_button"):
         st.session_state.chat_history = []
         st.rerun() # Rerun the Streamlit app to clear the chat display immediately
+
+
