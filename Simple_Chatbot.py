@@ -156,7 +156,7 @@ static_placeholders = {
     "{{PAYMENT_ISSUE_OPTION}}": "<b>Payment Issue</b>",
     "{{PAYMENT_METHOD}}": "<b>Payment</b>",
     "{{PAYMENT_OPTION}}": "<b>Payment</b>",
-    "{{PAYMENT_SECTION}}": "<b>Payment</b>",
+    "{{PAYMENT_SECTION}}": "<b>Payments</b>",
     "{{PAYMENTS_HELP_SECTION}}": "<b>Payments Help</b>",
     "{{PAYMENTS_PAGE}}": "<b>Payments</b>",
     "{{PRIVACY_POLICY_LINK}}": "<b>Privacy Policy</b>",
