@@ -124,7 +124,7 @@ static_placeholders = {
     "{{CONTACT_SUPPORT_LINK}}": "www.support-team.com",
     "{{SUPPORT_CONTACT_LINK}}": "www.support-team.com",
     "{{CANCEL_TICKET_SECTION}}": "<b>Ticket Cancellation</b>",
-    "{{CANCEL_TICKET_OPTION}}": "<b>Ticket Cancellation</b>",
+    "{{CANCEL_TICKET_OPTION}}": "<b>Cancel Ticket</b>",
     "{{GET_REFUND_OPTION}}": "<b>Get Refund</b>",
     "{{UPGRADE_TICKET_INFORMATION}}": "<b>Upgrade Ticket Information</b>",
     "{{TICKET_SECTION}}": "<b>Ticketing</b>",
