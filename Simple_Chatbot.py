@@ -154,7 +154,7 @@ static_placeholders = {
     "{{TYPE_EVENTS_OPTION}}": "<b>Type Events</b>",
     "{{PAYMENT_SECTION}}": "<b>Payment</b>",
     "{{PAYMENT_OPTION}}": "<b>Payment</b>",
-    "{{CANCELLATION_SECTION}}": "<b>Cancellation</b>",
+    "{{CANCELLATION_SECTION}}": "<b>Track Cancellation</b>",
     "{{CANCELLATION_OPTION}}": "<b>Cancellation</b>",
     "{{REFUND_OPTION}}": "<b>Refund</b>",
     "{{TRANSFER_TICKET_OPTION}}": "<b>Transfer Ticket</b>",
