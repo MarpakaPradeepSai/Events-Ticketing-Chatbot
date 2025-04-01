@@ -126,7 +126,7 @@ static_placeholders = {
     "{{CANCEL_TICKET_SECTION}}": "<b>Ticket Cancellation</b>",
     "{{CANCEL_TICKET_OPTION}}": "<b>Cancel Ticket</b>",
     "{{GET_REFUND_OPTION}}": "<b>Get Refund</b>",
-    "{{UPGRADE_TICKET_INFORMATION}}": "<b>Upgrade Ticket Information</b>",
+    "{{UPGRADE_TICKET_INFORMATION}}": "<b>Ticket Upgradation</b>",
     "{{TICKET_SECTION}}": "<b>Ticketing</b>",
     "{{CANCELLATION_POLICY_SECTION}}": "<b>Cancellation Policy</b>",
     "{{CHECK_CANCELLATION_POLICY_OPTION}}": "<b>Check Cancellation Policy</b>",
