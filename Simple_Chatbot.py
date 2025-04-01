@@ -5,6 +5,7 @@ import spacy
 import os
 import requests
 import time  # For simulating processing time
+import streamlit.components.v1 as components # Import streamlit components
 
 # Function to download files from GitHub (same as before)
 def download_from_github(repo_url, file_name, save_path):
@@ -411,9 +412,17 @@ if process_query_button:
         # Add assistant message to chat history
         st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
         last_role = "assistant" # Update last_role after assistant message
-        # Clear the selectbox after processing (optional)
-        # st.session_state.query_selectbox = "" # This might cause issues if user wants to resubmit
-        # st.experimental_rerun() # Might be too disruptive
+
+        # Scroll to bottom after bot response for dropdown query
+        components.html(
+            f"""
+                <script>
+                    window.parent.document.querySelector(".streamlit-chat-container").scrollTop = window.parent.document.querySelector(".streamlit-chat-container").scrollHeight;
+                </script>
+            """,
+            height=0,
+        )
+
 
 # Input box at the bottom (always displayed)
 if prompt := st.chat_input("Enter your own question:"):
@@ -468,6 +477,16 @@ if prompt := st.chat_input("Enter your own question:"):
         # Add assistant message to chat history
         st.session_state.chat_history.append({"role": "assistant", "content": full_response, "avatar": "🤖"})
         last_role = "assistant" # Update last_role after assistant message
+
+        # Scroll to bottom after bot response for free-form input
+        components.html(
+            f"""
+                <script>
+                    window.parent.document.querySelector(".streamlit-chat-container").scrollTop = window.parent.document.querySelector(".streamlit-chat-container").scrollHeight;
+                </script>
+            """,
+            height=0,
+        )
 
 # Conditionally display reset button (using the globally defined style)
 if st.session_state.chat_history: # Check if chat_history is not empty
